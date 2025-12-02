@@ -21,3 +21,4 @@ dist/
 htmlcov/ 
 .venv/ 
 __pycache__/ 
+test_openai.py 
