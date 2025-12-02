@@ -1,0 +1,12 @@
+.gcloudignore
+.git
+.gitignore
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+*.log
+.vscode/
+build/
+*.spec

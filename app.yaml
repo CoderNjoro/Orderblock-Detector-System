@@ -1,0 +1,12 @@
+runtime: python39
+entrypoint: gunicorn -b :$PORT wsgi:app
+
+instance_class: F1
+
+automatic_scaling:
+  target_cpu_utilization: 0.65
+  min_instances: 1
+  max_instances: 10
+
+env_variables:
+  PYTHON_ENV: "production"

@@ -1,0 +1,3345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Forex Order Block Analyzer - TwelveData</title>
+    <!-- Chart.js and Plugins -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.0/dist/chartjs-adapter-moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.0.2/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.0/dist/chartjs-chart-financial.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/ai-analysis.js" defer></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1> Order Block Analyzer</h1>
+            <p>Fast, intuitive Forex order block analysis for all skill levels</p>
+            <button id="themeToggle" class="btn btn-chart" aria-label="Toggle between light and dark theme">🌙 Toggle Theme</button>
+        </div>
+        <hr style="margin: 0 0 28px 0; border: none; border-top: 2px solid var(--border-color);">
+
+        
+        <div class="info-panel" aria-label="How to use this tool" style="margin-bottom: 24px; background: rgba(55,66,250,0.08); border-radius: 12px; padding: 18px 22px; display: flex; align-items: center; gap: 28px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 1.5em;"></span>
+                <span><b>Step 1:</b> Enter your <b>API Key</b></span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 1.5em;"></span>
+                <span><b>Step 2:</b> Select <b>Pair & Settings</b></span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 1.5em;"></span>
+                <span><b>Step 3:</b> Fetch & <b>Analyze</b></span>
+            </div>
+        </div>
+
+        <div class="controls-panel">
+            <div style="display: flex; flex-direction: column; gap: 18px; width: 100%;">
+                <div class="section-title" style="font-weight: 700; color: var(--accent-color); margin-bottom: 6px;">API & Connection</div>
+                <div class="control-group">
+                    <label for="apiKey">TwelveData API Key <span title="Get your free API key from TwelveData.com">❓</span></label>
+                    <div class="input-wrapper">
+                        <input type="password" id="apiKey" placeholder="Enter your TwelveData API key" aria-label="TwelveData API key" title="Get your API key from TwelveData.com">
+                        <div id="apiStatus" class="api-status disconnected" aria-live="polite">
+                            <span>🔴</span> Disconnected
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-title" style="font-weight: 700; color: var(--accent-color); margin: 18px 0 6px 0;">Forex Pair Selection</div>
+                <div class="control-group">
+                    <label>Popular Forex Pairs</label>
+                    <div class="forex-pairs" aria-label="Popular forex pairs">
+                        <div class="pair-btn active" onclick="selectPair('EUR/USD')" role="button" aria-label="Select EUR/USD pair">EUR/USD</div>
+                        <div class="pair-btn" onclick="selectPair('GBP/USD')" role="button" aria-label="Select GBP/USD pair">GBP/USD</div>
+                        <div class="pair-btn" onclick="selectPair('USD/JPY')" role="button" aria-label="Select USD/JPY pair">USD/JPY</div>
+                        <div class="pair-btn" onclick="selectPair('AUD/USD')" role="button" aria-label="Select AUD/USD pair">AUD/USD</div>
+                        <div class="pair-btn" onclick="selectPair('USD/CAD')" role="button" aria-label="Select USD/CAD pair">USD/CAD</div>
+                        <div class="pair-btn" onclick="selectPair('USD/CHF')" role="button" aria-label="Select USD/CHF pair">USD/CHF</div>
+                        <div class="pair-btn" onclick="selectPair('NZD/USD')" role="button" aria-label="Select NZD/USD pair">NZD/USD</div>
+                        <div class="pair-btn" onclick="selectPair('EUR/GBP')" role="button" aria-label="Select EUR/GBP pair">EUR/GBP</div>
+                        <div class="pair-btn" onclick="selectPair('XAU/USD')" role="button" aria-label="Select XAU/USD pair">XAU/USD</div>
+
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="symbol">Currency Pair <span title="Type a custom pair (e.g. EUR/USD, GBP/USD)"></span></label>
+                    <input type="text" id="symbol" value="EUR/USD" placeholder="e.g., EUR/USD, GBP/USD" aria-label="Currency pair" title="Type a custom pair (e.g. EUR/USD)">
+                </div>
+
+                <div class="section-title" style="font-weight: 700; color: var(--accent-color); margin: 18px 0 6px 0;">Chart Settings</div>
+                <div class="control-group">
+                    <label for="timeframe">Timeframe <span title="Select the chart timeframe"></span></label>
+                    <select id="timeframe" aria-label="Select timeframe" title="Select the chart timeframe">
+                        <option value="1min">1 Minute</option>
+                        <option value="3min">3 Minutes</option>
+                        <option value="5min">5 Minutes</option>
+                        <option value="15min">15 Minutes</option>
+                        <option value="30min">30 Minutes</option>
+                        <option value="45">45 Minutes</option>
+                        <option value="1h" selected>1 Hour</option>
+                        <option value="2h">2 Hours</option>
+                        <option value="4h">4 Hours</option>
+                        <option value="1day">Daily</option>
+                        <option value="1week">Weekly</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="outputsize">Data Size <span title="Number of bars to fetch"></span></label>
+                    <select id="outputsize" aria-label="Select data size" title="Number of bars to fetch">
+                        <option value="100">100 bars</option>
+                        <option value="200">200 bars</option>
+                        <option value="500" selected>500 bars</option>
+                        <option value="1000">1000 bars</option>
+                        <option value="5000">5000 bars</option>
+                    </select>
+                </div>
+
+                <div class="section-title" style="font-weight: 700; color: var(--accent-color); margin: 18px 0 6px 0;">Live Data</div>
+                <div class="control-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="liveUpdates" aria-label="Enable live data updates" title="Enable live data updates every 30 seconds">
+                        <label for="liveUpdates">Enable Live Updates (every 30s)</label>
+                    </div>
+                </div>
+
+                <div class="section-title" style="font-weight: 700; color: var(--accent-color); margin: 18px 0 6px 0;">Actions</div>
+                <div class="control-group" style="text-align: center;">
+                    <button id="fetchData" class="btn btn-primary" aria-label="Fetch forex data from TwelveData API" style="font-size: 1.22em; padding: 16px 38px;">
+                        Fetch Data
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Removed duplicate API key, pair, and settings controls for a cleaner, non-redundant UI -->
+
+        <!-- Volume Profile Settings section removed for ICT-only focus -->
+
+        <div class="settings-section">
+            <div class="settings-title">
+                ⚙️ Enhanced Order Block Settings
+            </div>
+            <div class="range-input">
+                <label for="volumePivotLength">Volume Pivot Length:</label>
+                <input type="range" id="volumePivotLength" min="1" max="20" value="5" aria-label="Volume pivot length">
+                <span class="value" id="volumePivotLengthValue">5</span>
+            </div>
+            <div class="range-input">
+                <label for="volumeThreshold">Volume Threshold (x avg):</label>
+                <input type="range" id="volumeThreshold" min="1.0" max="3.0" step="0.1" value="1.2" aria-label="Volume threshold multiplier">
+                <span class="value" id="volumeThresholdValue">1.2</span>
+            </div>
+            <div class="range-input">
+                <label for="impulseLookAhead">Impulse Look Ahead:</label>
+                <input type="range" id="impulseLookAhead" min="5" max="30" value="20" aria-label="Impulse move look ahead">
+                <span class="value" id="impulseLookAheadValue">20</span>
+            </div>
+            <div class="control-group">
+                <label for="mitigationMethod">Mitigation Method:</label>
+                <select id="mitigationMethod" aria-label="Select mitigation method">
+                    <option value="Wick" selected>Wick</option>
+                    <option value="Close">Close</option>
+                </select>
+            </div>
+            <div class="range-input">
+                <label for="maxOrderBlocks">Max Order Blocks:</label>
+                <input type="range" id="maxOrderBlocks" min="1" max="10" value="3" aria-label="Maximum order blocks">
+                <span class="value" id="maxOrderBlocksValue">3</span>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="validateWithBOS" checked aria-label="Validate with Break of Structure">
+                <label for="validateWithBOS">Validate with BOS (Break of Structure)</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="validateWithCHOCH" checked aria-label="Validate with Change of Character">
+                <label for="validateWithCHOCH">Validate with CHOCH (Change of Character)</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="requireFVG" checked aria-label="Require Fair Value Gap for validation">
+                <label for="requireFVG">Require FVG (Imbalance) for validation</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="checkMitigation" checked aria-label="Check for order block mitigation">
+                <label for="checkMitigation">Check for OB mitigation</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="enhancedDetection" checked aria-label="Use enhanced detection algorithm">
+                <label for="enhancedDetection">Use Enhanced Detection Algorithm</label>
+            </div>
+            <div class="range-input">
+                <label for="minImpulseMove">Min Impulse Move (pips):</label>
+                <input type="range" id="minImpulseMove" min="5" max="50" value="15" aria-label="Minimum impulse move in pips">
+                <span class="value" id="minImpulseMoveValue">15</span>
+            </div>
+            <div class="range-input">
+                <label for="swingLookback">Swing Lookback:</label>
+                <input type="range" id="swingLookback" min="5" max="50" value="20" aria-label="Swing lookback period">
+                <span class="value" id="swingLookbackValue">20</span>
+            </div>
+            <div class="range-input">
+                <label for="mitigationThreshold">Mitigation Threshold (%):</label>
+                <input type="range" id="mitigationThreshold" min="5" max="25" value="10" aria-label="Mitigation threshold percentage">
+                <span class="value" id="mitigationThresholdValue">10</span>
+            </div>
+            <div class="control-group">
+                <button id="analyzeChart" class="btn btn-success" disabled aria-label="Analyze order blocks on chart">
+                     Analyze Order Blocks
+                </button>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-title"> Backtesting Settings</div>
+            <div class="range-input">
+                <label for="stopLossPips">Stop Loss (pips):</label>
+                <input type="range" id="stopLossPips" min="5" max="100" value="20" aria-label="Stop loss in pips">
+                <span class="value" id="stopLossPipsValue">20</span>
+            </div>
+            <div class="range-input">
+                <label for="takeProfitPips">Take Profit (pips):</label>
+                <input type="range" id="takeProfitPips" min="10" max="300" value="60" aria-label="Take profit in pips">
+                <span class="value" id="takeProfitPipsValue">60</span>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="backtestFreshOnly" checked aria-label="Backtest only fresh order blocks">
+                <label for="backtestFreshOnly">Backtest Fresh OBs Only</label>
+            </div>
+            <div class="control-group">
+                <button id="runBacktest" class="btn btn-warning" disabled aria-label="Run backtest on order blocks">
+                     Run Backtest
+                </button>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-title">📈 Performance Monitor</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="fetchTime">0 ms</div>
+                    <div class="stat-label">API Fetch Time</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="renderTime">0 ms</div>
+                    <div class="stat-label">Chart Render Time</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="status"></div>
+
+        <div class="chart-controls">
+            <h3>📈 Price Chart</h3>
+            <div class="chart-buttons">
+                <button id="openTradingViewChart" class="btn btn-chart" disabled aria-label="Open chart in TradingView (hold Shift for fallback mode)">
+                     Open Same Chart in New Tab
+                </button>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="forexChart"></canvas>
+        </div>
+        <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;">
+            <button id="zoomInBtn" class="btn btn-chart" aria-label="Zoom In">➕ Zoom In</button>
+            <button id="zoomOutBtn" class="btn btn-chart" aria-label="Zoom Out">➖ Zoom Out</button>
+            <button id="resetZoomBtn" class="btn btn-chart" aria-label="Reset Zoom">🔄 Reset Zoom</button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalBars">0</div>
+                <div class="stat-label">Total Bars</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="bullishBlocks">0</div>
+                <div class="stat-label">Bullish Blocks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="bearishBlocks">0</div>
+                <div class="stat-label">Bearish Blocks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="freshBlocks">0</div>
+                <div class="stat-label">Fresh Blocks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="mitigatedBlocks">0</div>
+                <div class="stat-label">Mitigated Blocks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="strongestLevel">0.0000</div>
+                <div class="stat-label">Strongest Level</div>
+            </div>
+        </div>
+
+        <div id="backtestResultsPanel" class="analysis-panel" style="display: none;">
+            <div class="analysis-header">
+                <h3>Backtesting Results</h3>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalTrades">0</div>
+                    <div class="stat-label">Total Trades</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="winningTrades">0</div>
+                    <div class="stat-label">Winning Trades</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="losingTrades">0</div>
+                    <div class="stat-label">Losing Trades</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="winRate">0%</div>
+                    <div class="stat-label">Win Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalPips">0.00</div>
+                    <div class="stat-label">Total Pips</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="maxDrawdown">0.00</div>
+                    <div class="stat-label">Max Drawdown (Pips)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Volume Profile Analysis panel removed for ICT-only focus -->
+
+        <div id="analysisPanel" class="analysis-panel" style="display: none;">
+            <div class="analysis-header">
+                <h3>📈 Order Block Analysis</h3>
+                <div class="filter-tabs">
+                    <div class="filter-tab active" onclick="filterBlocks('all')" role="button" aria-label="Show all order blocks">All</div>
+                    <div class="filter-tab" onclick="filterBlocks('bullish')" role="button" aria-label="Show bullish order blocks">Bullish</div>
+                    <div class="filter-tab" onclick="filterBlocks('bearish')" role="button" aria-label="Show bearish order blocks">Bearish</div>
+                    <div class="filter-tab" onclick="filterBlocks('fresh')" role="button" aria-label="Show fresh order blocks">Fresh</div>
+                    <div class="filter-tab" onclick="filterBlocks('mitigated')" role="button" aria-label="Show mitigated order blocks">Mitigated</div>
+                    <div class="filter-tab" onclick="filterBlocks('strong')" role="button" aria-label="Show strong order blocks">Strong</div>
+                    <button id="exportBlocks" class="btn btn-chart" aria-label="Export order blocks to CSV">📥 Export</button>
+                </div>
+            </div>
+            <div id="orderBlocksGrid" class="order-blocks-grid"></div>
+        </div>
+    </div>
+
+    <footer style="margin: 48px 0 0 0; text-align: center; color: var(--text-secondary); font-size: 1.01em; letter-spacing: 0.01em; border-top: 1.5px solid var(--border-color); padding-top: 16px;">
+        <span>© 2025 <b>Enhanced Forex Order Block Analyzer</b> &mdash; <span style="color: var(--accent-color);">v1.0</span> &mdash; UI by <b>Tech</b></span>
+    </footer>
+
+    <script>
+        let forexData = null;
+        let chart = null;
+        let orderBlocks = [];
+        let volumeProfile = null;
+        let currentFilter = 'all';
+        let currentVolumeFilter = 'all';
+        let liveUpdateInterval = null;
+
+        // TwelveData API configuration
+        const TWELVE_DATA_BASE_URL = 'https://api.twelvedata.com';
+
+        // Initialize forex chart
+        const ctx = document.getElementById('forexChart').getContext('2d');
+
+        // Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Show status messages
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            if (type === 'success' || type === 'error' || type === 'warning') {
+                setTimeout(() => {
+                    statusDiv.innerHTML = '';
+                }, 5000);
+            }
+        }
+
+        // Volume pivot high detection
+        function isVolumePivotHigh(data, index, length) {
+            if (index < length || index >= data.length - length) return false;
+            const currentVolume = parseFloat(data[index].volume);
+            let isPivot = true;
+            for (let i = 1; i <= length; i++) {
+                if (index - i >= 0 && parseFloat(data[index - i].volume) >= currentVolume) {
+                    isPivot = false;
+                    break;
+                }
+                if (index + i < data.length && parseFloat(data[index + i].volume) >= currentVolume) {
+                    isPivot = false;
+                    break;
+                }
+            }
+            return isPivot;
+        }
+
+        // Enhanced fractal detection
+        function isValidFractal(data, index, type) {
+            if (index < 2 || index >= data.length - 2) return false;
+            const current = data[index];
+            const left2 = data[index - 2];
+            const left1 = data[index - 1];
+            const right1 = data[index + 1];
+            const right2 = data[index + 2];
+            if (type === 'high') {
+                const currentHigh = parseFloat(current.high);
+                return currentHigh > parseFloat(left2.high) &&
+                       currentHigh > parseFloat(left1.high) &&
+                       currentHigh > parseFloat(right1.high) &&
+                       currentHigh > parseFloat(right2.high);
+            } else {
+                const currentLow = parseFloat(current.low);
+                return currentLow < parseFloat(left2.low) &&
+                       currentLow < parseFloat(left1.low) &&
+                       currentLow < parseFloat(right1.low) &&
+                       currentLow < parseFloat(right2.low);
+            }
+        }
+
+        // Enhanced FVG detection
+        function findFVG(data, index) {
+            if (index < 1 || index >= data.length - 1) return null;
+            const prev = data[index - 1];
+            const current = data[index];
+            const next = data[index + 1];
+            const prevHigh = parseFloat(prev.high);
+            const prevLow = parseFloat(prev.low);
+            const currentHigh = parseFloat(current.high);
+            const currentLow = parseFloat(current.low);
+            const nextHigh = parseFloat(next.high);
+            const nextLow = parseFloat(next.low);
+            if (prevLow > nextHigh) {
+                return {
+                    type: 'bullish',
+                    top: prevLow,
+                    bottom: nextHigh,
+                    size: prevLow - nextHigh,
+                    time: current.datetime
+                };
+            }
+            if (prevHigh < nextLow) {
+                return {
+                    type: 'bearish',
+                    top: nextLow,
+                    bottom: prevHigh,
+                    size: nextLow - prevHigh,
+                    time: current.datetime
+                };
+            }
+            return null;
+        }
+
+        // Enhanced BOS detection
+        function findBOS(data, fromIndex, type) {
+            const lookback = parseInt(document.getElementById('swingLookback').value);
+            const pricePrecision = getPricePrecision(document.getElementById('symbol').value);
+            let swingPoint = null;
+            if (type === 'bullish') {
+                let highestHigh = 0;
+                let highestHighIndex = -1;
+                for (let i = fromIndex; i < data.length && i < fromIndex + lookback; i++) {
+                    const high = parseFloat(data[i].high);
+                    if (high > highestHigh) {
+                        highestHigh = high;
+                        highestHighIndex = i;
+                    }
+                }
+                if (highestHighIndex !== -1 && highestHigh > 0) {
+                    for (let i = highestHighIndex + 1; i < data.length; i++) {
+                        if (parseFloat(data[i].close) > highestHigh) {
+                            return {
+                                price: highestHigh.toFixed(pricePrecision),
+                                index: highestHighIndex,
+                                breakoutIndex: i
+                            };
+                        }
+                    }
+                }
+            } else {
+                let lowestLow = Infinity;
+                let lowestLowIndex = -1;
+                for (let i = fromIndex; i < data.length && i < fromIndex + lookback; i++) {
+                    const low = parseFloat(data[i].low);
+                    if (low < lowestLow) {
+                        lowestLow = low;
+                        lowestLowIndex = i;
+                    }
+                }
+                if (lowestLowIndex !== -1 && lowestLow !== Infinity) {
+                    for (let i = lowestLowIndex + 1; i < data.length; i++) {
+                        if (parseFloat(data[i].close) < lowestLow) {
+                            return {
+                                price: lowestLow.toFixed(pricePrecision),
+                                index: lowestLowIndex,
+                                breakoutIndex: i
+                            };
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        // Find Change of Character (CHOCH)
+        function findCHOCH(data, obEntryIndex, obType, swingLookback) {
+            const pricePrecision = getPricePrecision(document.getElementById('symbol').value);
+            if (obEntryIndex < swingLookback || obEntryIndex >= data.length - 1) return null;
+            let chochPrice = null;
+            let chochIndex = -1;
+            let breakoutIndex = -1;
+            if (obType === 'bullish') {
+                let priorHigh = 0;
+                let priorHighIndex = -1;
+                for (let i = obEntryIndex - 1; i >= obEntryIndex - swingLookback && i >= 0; i--) {
+                    if (parseFloat(data[i].high) > priorHigh) {
+                        priorHigh = parseFloat(data[i].high);
+                        priorHighIndex = i;
+                    }
+                }
+                if (priorHighIndex === -1) return null;
+                for (let i = obEntryIndex + 1; i < data.length; i++) {
+                    if (parseFloat(data[i].close) > priorHigh) {
+                        chochPrice = priorHigh;
+                        chochIndex = priorHighIndex;
+                        breakoutIndex = i;
+                        break;
+                    }
+                }
+            } else {
+                let priorLow = Infinity;
+                let priorLowIndex = -1;
+                for (let i = obEntryIndex - 1; i >= obEntryIndex - swingLookback && i >= 0; i--) {
+                    if (parseFloat(data[i].low) < priorLow) {
+                        priorLow = parseFloat(data[i].low);
+                        priorLowIndex = i;
+                    }
+                }
+                if (priorLowIndex === -1) return null;
+                for (let i = obEntryIndex + 1; i < data.length; i++) {
+                    if (parseFloat(data[i].close) < priorLow) {
+                        chochPrice = priorLow;
+                        chochIndex = priorLowIndex;
+                        breakoutIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (chochPrice !== null) {
+                return {
+                    price: chochPrice.toFixed(pricePrecision),
+                    index: chochIndex,
+                    breakoutIndex: breakoutIndex
+                };
+            }
+            return null;
+        }
+
+        // Check for mitigation
+        function isMitigated(orderBlock, currentIndex, data, mitigationMethod) {
+            if (!document.getElementById('checkMitigation').checked) return false;
+            const { type, top, bottom, entryIndex } = orderBlock;
+            for (let i = entryIndex + 1; i < currentIndex; i++) {
+                const price = mitigationMethod === 'Close' ? parseFloat(data[i].close) : (type === 'bullish' ? parseFloat(data[i].low) : parseFloat(data[i].high));
+                if (type === 'bullish' && price <= parseFloat(bottom)) {
+                    return true;
+                }
+                if (type === 'bearish' && price >= parseFloat(top)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Calculate pips for a given symbol
+        function getPips(symbol) {
+            if (symbol.includes("JPY")) {
+                return 0.01;
+            }
+            return 0.0001;
+        }
+
+        // Get price precision for display
+        function getPricePrecision(symbol) {
+            if (symbol.includes("JPY")) {
+                return 3;
+            }
+            return 5;
+        }
+
+        // Enhanced Order Block Detection with Improved Precision
+        function findOrderBlocks(data) {
+            const maxOrderBlocks = parseInt(document.getElementById('maxOrderBlocks').value);
+            const minImpulseMove = parseFloat(document.getElementById('minImpulseMove').value);
+            const impulseLookAhead = parseInt(document.getElementById('impulseLookAhead').value);
+            const pipsValue = getPips(document.getElementById('symbol').value);
+            const pricePrecision = getPricePrecision(document.getElementById('symbol').value);
+            const swingLookback = parseInt(document.getElementById('swingLookback').value);
+
+            const foundOrderBlocks = [];
+
+            // Enhanced market structure detection
+            const marketStructure = detectEnhancedMarketStructure(data, swingLookback);
+
+            // First, identify all CHOCH and BOS events
+            const chochEvents = findCHOCHEvents(data, marketStructure);
+            const bosEvents = findBOSEvents(data, marketStructure);
+
+            // Look for order blocks before CHOCH events
+            chochEvents.forEach(choch => {
+                const orderBlock = findOrderBlockBeforeCHOCH(data, choch, marketStructure, minImpulseMove, pipsValue, impulseLookAhead);
+                if (orderBlock) {
+                    foundOrderBlocks.push(orderBlock);
+                }
+            });
+
+            // Look for order blocks before BOS events
+            bosEvents.forEach(bos => {
+                const orderBlock = findOrderBlockBeforeBOS(data, bos, marketStructure, minImpulseMove, pipsValue, impulseLookAhead);
+                if (orderBlock) {
+                    foundOrderBlocks.push(orderBlock);
+                }
+            });
+
+            // Process and validate all found order blocks
+            const processedOrderBlocks = foundOrderBlocks.map(ob => {
+                // Simple strength calculation based on impulse move size
+                let strengthScore = 0;
+                const impulsePips = parseFloat(ob.impulseMove);
+                
+                if (impulsePips >= minImpulseMove * 2.5) {
+                    strengthScore = 3; // Strong
+                } else if (impulsePips >= minImpulseMove * 1.8) {
+                    strengthScore = 2; // Medium
+                } else {
+                    strengthScore = 1; // Weak
+                }
+
+                if (strengthScore >= 3) ob.strength = 'Strong';
+                else if (strengthScore >= 2) ob.strength = 'Medium';
+                else ob.strength = 'Weak';
+
+                // Check for mitigation
+                ob.isFresh = !isMitigated(ob, data.length - 1, data, document.getElementById('mitigationMethod').value);
+                
+                // Format all numeric values
+                ob.open = ob.open.toFixed(pricePrecision);
+                ob.close = ob.close.toFixed(pricePrecision);
+                ob.high = ob.high.toFixed(pricePrecision);
+                ob.low = ob.low.toFixed(pricePrecision);
+                ob.top = ob.top.toFixed(pricePrecision);
+                ob.bottom = ob.bottom.toFixed(pricePrecision);
+                ob.avg = ob.avg.toFixed(pricePrecision);
+                
+                if (ob.triggerPrice) {
+                    ob.triggerPrice = parseFloat(ob.triggerPrice).toFixed(pricePrecision);
+                }
+                
+                return ob;
+            });
+
+            // Enhanced filtering and ranking
+            const bullishOBs = processedOrderBlocks.filter(ob => ob.type === 'bullish');
+            const bearishOBs = processedOrderBlocks.filter(ob => ob.type === 'bearish');
+            
+            // Sort by strength and recency
+            const sortByStrength = (a, b) => {
+                const strengthOrder = { 'Strong': 3, 'Medium': 2, 'Weak': 1 };
+                const strengthDiff = strengthOrder[b.strength] - strengthOrder[a.strength];
+                if (strengthDiff !== 0) return strengthDiff;
+                
+                // Secondary sorting by recency
+                return new Date(b.time) - new Date(a.time);
+            };
+            
+            const finalBullishOBs = bullishOBs.sort(sortByStrength).slice(0, maxOrderBlocks);
+            const finalBearishOBs = bearishOBs.sort(sortByStrength).slice(0, maxOrderBlocks);
+            
+            return [...finalBullishOBs, ...finalBearishOBs].sort((a, b) => new Date(b.time) - new Date(a.time));
+        }
+
+        // Find all CHOCH events in the data
+        function findCHOCHEvents(data, marketStructure) {
+            const chochEvents = [];
+            const swingLookback = parseInt(document.getElementById('swingLookback').value);
+            
+            for (let i = swingLookback; i < data.length - 10; i++) {
+                // Look for bullish CHOCH (break above previous swing high)
+                const bullishCHOCH = findBullishCHOCH(data, i, swingLookback);
+                if (bullishCHOCH) {
+                    chochEvents.push({
+                        type: 'bullish',
+                        index: i,
+                        price: bullishCHOCH.price,
+                        time: data[i].datetime,
+                        priorSwingHigh: bullishCHOCH.priorSwingHigh,
+                        priorSwingHighIndex: bullishCHOCH.priorSwingHighIndex
+                    });
+                }
+                
+                // Look for bearish CHOCH (break below previous swing low)
+                const bearishCHOCH = findBearishCHOCH(data, i, swingLookback);
+                if (bearishCHOCH) {
+                    chochEvents.push({
+                        type: 'bearish',
+                        index: i,
+                        price: bearishCHOCH.price,
+                        time: data[i].datetime,
+                        priorSwingLow: bearishCHOCH.priorSwingLow,
+                        priorSwingLowIndex: bearishCHOCH.priorSwingLowIndex
+                    });
+                }
+            }
+            
+            return chochEvents;
+        }
+
+        // Find all BOS events in the data
+        function findBOSEvents(data, marketStructure) {
+            const bosEvents = [];
+            const swingLookback = parseInt(document.getElementById('swingLookback').value);
+            
+            for (let i = swingLookback; i < data.length - 10; i++) {
+                // Look for bullish BOS (break above recent swing high)
+                const bullishBOS = findBullishBOS(data, i, swingLookback);
+                if (bullishBOS) {
+                    bosEvents.push({
+                        type: 'bullish',
+                        index: i,
+                        price: bullishBOS.price,
+                        time: data[i].datetime,
+                        swingHigh: bullishBOS.swingHigh,
+                        swingHighIndex: bullishBOS.swingHighIndex
+                    });
+                }
+                
+                // Look for bearish BOS (break below recent swing low)
+                const bearishBOS = findBearishBOS(data, i, swingLookback);
+                if (bearishBOS) {
+                    bosEvents.push({
+                        type: 'bearish',
+                        index: i,
+                        price: bearishBOS.price,
+                        time: data[i].datetime,
+                        swingLow: bearishBOS.swingLow,
+                        swingLowIndex: bearishBOS.swingLowIndex
+                    });
+                }
+            }
+            
+            return bosEvents;
+        }
+
+        // Find bullish CHOCH event
+        function findBullishCHOCH(data, index, lookback) {
+            // Find the most recent swing high before this point
+            let priorSwingHigh = -Infinity;
+            let priorSwingHighIndex = -1;
+            
+            for (let i = index - 1; i >= Math.max(0, index - lookback); i--) {
+                const high = parseFloat(data[i].high);
+                if (high > priorSwingHigh) {
+                    // Check if this is a swing high
+                    let isSwingHigh = true;
+                    for (let j = 1; j <= 3; j++) {
+                        if (i - j >= 0 && parseFloat(data[i - j].high) >= high) {
+                            isSwingHigh = false;
+                            break;
+                        }
+                        if (i + j < data.length && parseFloat(data[i + j].high) >= high) {
+                            isSwingHigh = false;
+                            break;
+                        }
+                    }
+                    
+                    if (isSwingHigh) {
+                        priorSwingHigh = high;
+                        priorSwingHighIndex = i;
+                    }
+                }
+            }
+            
+            if (priorSwingHighIndex === -1) return null;
+            
+            // Check if current candle breaks above the prior swing high
+            const currentClose = parseFloat(data[index].close);
+            
+            if (currentClose > priorSwingHigh) {
+                return {
+                    price: priorSwingHigh,
+                    priorSwingHigh: priorSwingHigh,
+                    priorSwingHighIndex: priorSwingHighIndex
+                };
+            }
+            
+            return null;
+        }
+
+        // Find bearish CHOCH event
+        function findBearishCHOCH(data, index, lookback) {
+            // Find the most recent swing low before this point
+            let priorSwingLow = Infinity;
+            let priorSwingLowIndex = -1;
+            
+            for (let i = index - 1; i >= Math.max(0, index - lookback); i--) {
+                const low = parseFloat(data[i].low);
+                if (low < priorSwingLow) {
+                    // Check if this is a swing low
+                    let isSwingLow = true;
+                    for (let j = 1; j <= 3; j++) {
+                        if (i - j >= 0 && parseFloat(data[i - j].low) <= low) {
+                            isSwingLow = false;
+                            break;
+                        }
+                        if (i + j < data.length && parseFloat(data[i + j].low) <= low) {
+                            isSwingLow = false;
+                            break;
+                        }
+                    }
+                    
+                    if (isSwingLow) {
+                        priorSwingLow = low;
+                        priorSwingLowIndex = i;
+                    }
+                }
+            }
+            
+            if (priorSwingLowIndex === -1) return null;
+            
+            // Check if current candle breaks below the prior swing low
+            const currentClose = parseFloat(data[index].close);
+            
+            if (currentClose < priorSwingLow) {
+                return {
+                    price: priorSwingLow,
+                    priorSwingLow: priorSwingLow,
+                    priorSwingLowIndex: priorSwingLowIndex
+                };
+            }
+            
+            return null;
+        }
+
+        // Find bullish BOS event
+        function findBullishBOS(data, index, lookback) {
+            // Find a recent swing high
+            let swingHigh = -Infinity;
+            let swingHighIndex = -1;
+            
+            for (let i = index - 1; i >= Math.max(0, index - lookback); i--) {
+                const high = parseFloat(data[i].high);
+                if (high > swingHigh) {
+                    // Check if this is a swing high
+                    let isSwingHigh = true;
+                    for (let j = 1; j <= 3; j++) {
+                        if (i - j >= 0 && parseFloat(data[i - j].high) >= high) {
+                            isSwingHigh = false;
+                            break;
+                        }
+                        if (i + j < data.length && parseFloat(data[i + j].high) >= high) {
+                            isSwingHigh = false;
+                            break;
+                        }
+                    }
+                    
+                    if (isSwingHigh) {
+                        swingHigh = high;
+                        swingHighIndex = i;
+                    }
+                }
+            }
+            
+            if (swingHighIndex === -1) return null;
+            
+            // Check if current candle breaks above the swing high
+            const currentClose = parseFloat(data[index].close);
+            
+            if (currentClose > swingHigh) {
+                return {
+                    price: swingHigh,
+                    swingHigh: swingHigh,
+                    swingHighIndex: swingHighIndex
+                };
+            }
+            
+            return null;
+        }
+
+        // Find bearish BOS event
+        function findBearishBOS(data, index, lookback) {
+            // Find a recent swing low
+            let swingLow = Infinity;
+            let swingLowIndex = -1;
+            
+            for (let i = index - 1; i >= Math.max(0, index - lookback); i--) {
+                const low = parseFloat(data[i].low);
+                if (low < swingLow) {
+                    // Check if this is a swing low
+                    let isSwingLow = true;
+                    for (let j = 1; j <= 3; j++) {
+                        if (i - j >= 0 && parseFloat(data[i - j].low) <= low) {
+                            isSwingLow = false;
+                            break;
+                        }
+                        if (i + j < data.length && parseFloat(data[i + j].low) <= low) {
+                            isSwingLow = false;
+                            break;
+                        }
+                    }
+                    
+                    if (isSwingLow) {
+                        swingLow = low;
+                        swingLowIndex = i;
+                    }
+                }
+            }
+            
+            if (swingLowIndex === -1) return null;
+            
+            // Check if current candle breaks below the swing low
+            const currentClose = parseFloat(data[index].close);
+            
+            if (currentClose < swingLow) {
+                return {
+                    price: swingLow,
+                    swingLow: swingLow,
+                    swingLowIndex: swingLowIndex
+                };
+            }
+            
+            return null;
+        }
+
+        // Analyze impulse move after a specific candle
+        function analyzeImpulseMoveAfterCandle(data, candleIndex, type, minImpulseMove, pipsValue, lookAhead) {
+            const maxLookAhead = Math.min(lookAhead, data.length - candleIndex - 1);
+            let maxMove = 0;
+            let moveEndIndex = -1;
+            
+            if (type === 'bullish') {
+                const startPrice = parseFloat(data[candleIndex].low);
+                let highestPrice = startPrice;
+                
+                for (let i = candleIndex + 1; i < data.length && i < candleIndex + maxLookAhead; i++) {
+                    const high = parseFloat(data[i].high);
+                    const low = parseFloat(data[i].low);
+                    
+                    if (high > highestPrice) {
+                        highestPrice = high;
+                        moveEndIndex = i;
+                    } else if (low < startPrice * 0.999) {
+                        // Break of structure - stop looking
+                        break;
+                    }
+                }
+                
+                maxMove = (highestPrice - startPrice) / pipsValue;
+                
+            } else {
+                const startPrice = parseFloat(data[candleIndex].high);
+                let lowestPrice = startPrice;
+                
+                for (let i = candleIndex + 1; i < data.length && i < candleIndex + maxLookAhead; i++) {
+                    const high = parseFloat(data[i].high);
+                    const low = parseFloat(data[i].low);
+                    
+                    if (low < lowestPrice) {
+                        lowestPrice = low;
+                        moveEndIndex = i;
+                    } else if (high > startPrice * 1.001) {
+                        // Break of structure - stop looking
+                        break;
+                    }
+                }
+                
+                maxMove = (startPrice - lowestPrice) / pipsValue;
+            }
+            
+            const isValid = maxMove >= minImpulseMove && moveEndIndex !== -1;
+            
+            return {
+                isValid,
+                move: maxMove,
+                endIndex: moveEndIndex
+            };
+        }
+
+        // Enhanced market structure detection with improved precision
+        function detectEnhancedMarketStructure(data, lookback) {
+            const structure = {
+                swingHighs: [],
+                swingLows: [],
+                trend: 'neutral',
+                strength: 'weak',
+                momentum: 0,
+                volatility: 0
+            };
+
+            // Enhanced swing point detection with volume confirmation
+            for (let i = lookback; i < data.length - lookback; i++) {
+                const current = data[i];
+                const currentHigh = parseFloat(current.high);
+                const currentLow = parseFloat(current.low);
+                const currentVolume = parseFloat(current.volume || 1);
+                
+                // Calculate local volume average
+                const localVolumes = data.slice(i - lookback, i + lookback + 1).map(d => parseFloat(d.volume || 1));
+                const avgVolume = localVolumes.reduce((a, b) => a + b, 0) / localVolumes.length;
+                
+                // Check for swing high with volume confirmation
+                let isSwingHigh = true;
+                let volumeConfirmation = currentVolume > avgVolume * 1.2;
+                
+                for (let j = 1; j <= lookback; j++) {
+                    if (parseFloat(data[i - j].high) >= currentHigh || parseFloat(data[i + j].high) >= currentHigh) {
+                        isSwingHigh = false;
+                        break;
+                    }
+                }
+                
+                // Check for swing low with volume confirmation
+                let isSwingLow = true;
+                
+                for (let j = 1; j <= lookback; j++) {
+                    if (parseFloat(data[i - j].low) <= currentLow || parseFloat(data[i + j].low) <= currentLow) {
+                        isSwingLow = false;
+                        break;
+                    }
+                }
+                
+                if (isSwingHigh && volumeConfirmation) {
+                    structure.swingHighs.push({ 
+                        index: i, 
+                        price: currentHigh, 
+                        time: current.datetime,
+                        volume: currentVolume,
+                        strength: currentVolume / avgVolume
+                    });
+                }
+                if (isSwingLow && volumeConfirmation) {
+                    structure.swingLows.push({ 
+                        index: i, 
+                        price: currentLow, 
+                        time: current.datetime,
+                        volume: currentVolume,
+                        strength: currentVolume / avgVolume
+                    });
+                }
+            }
+
+            // Enhanced trend and strength determination
+            if (structure.swingHighs.length > 0 && structure.swingLows.length > 0) {
+                const recentHighs = structure.swingHighs.slice(-5);
+                const recentLows = structure.swingLows.slice(-5);
+                
+                if (recentHighs.length >= 2 && recentLows.length >= 2) {
+                    // Calculate trend strength using linear regression
+                    const highTrend = calculateTrendStrength(recentHighs.map(h => h.price));
+                    const lowTrend = calculateTrendStrength(recentLows.map(l => l.price));
+                    
+                    structure.momentum = (highTrend + lowTrend) / 2;
+                    structure.volatility = calculateVolatility(data.slice(-20).map(d => parseFloat(d.close)));
+                    
+                    if (highTrend > 0.6 && lowTrend > 0.6) {
+                        structure.trend = 'bullish';
+                        structure.strength = highTrend > 0.8 ? 'strong' : 'medium';
+                    } else if (highTrend < -0.6 && lowTrend < -0.6) {
+                        structure.trend = 'bearish';
+                        structure.strength = highTrend < -0.8 ? 'strong' : 'medium';
+                    } else {
+                        structure.trend = 'neutral';
+                        structure.strength = Math.abs(highTrend) > 0.3 || Math.abs(lowTrend) > 0.3 ? 'medium' : 'weak';
+                    }
+                }
+            }
+
+            return structure;
+        }
+
+        // Enhanced volume profile analysis with improved precision
+        function analyzeEnhancedVolumeProfile(data, pivotLength) {
+            const volumeProfile = {
+                highVolumePeriods: [],
+                volumeTrend: 'neutral',
+                averageVolume: 0,
+                volumeDistribution: [],
+                volumeZones: []
+            };
+
+            // Calculate enhanced average volume with outlier removal
+            const volumes = data.map(d => parseFloat(d.volume || 1));
+            const sortedVolumes = [...volumes].sort((a, b) => a - b);
+            const q1 = sortedVolumes[Math.floor(sortedVolumes.length * 0.25)];
+            const q3 = sortedVolumes[Math.floor(sortedVolumes.length * 0.75)];
+            const iqr = q3 - q1;
+            const lowerBound = q1 - 1.5 * iqr;
+            const upperBound = q3 + 1.5 * iqr;
+            
+            const filteredVolumes = volumes.filter(v => v >= lowerBound && v <= upperBound);
+            volumeProfile.averageVolume = filteredVolumes.reduce((a, b) => a + b, 0) / filteredVolumes.length;
+
+            // Enhanced high volume period detection
+            for (let i = pivotLength; i < data.length - pivotLength; i++) {
+                const currentVolume = parseFloat(data[i].volume || 1);
+                let isHighVolume = true;
+                let volumeRatio = currentVolume / volumeProfile.averageVolume;
+                
+                for (let j = 1; j <= pivotLength; j++) {
+                    if (parseFloat(data[i - j].volume || 1) >= currentVolume || 
+                        parseFloat(data[i + j].volume || 1) >= currentVolume) {
+                        isHighVolume = false;
+                        break;
+                    }
+                }
+                
+                if (isHighVolume && volumeRatio > 1.5) {
+                    volumeProfile.highVolumePeriods.push({
+                        index: i,
+                        volume: currentVolume,
+                        time: data[i].datetime,
+                        ratio: volumeRatio
+                    });
+                }
+            }
+
+            // Enhanced volume trend analysis
+            const recentVolumes = volumes.slice(-30);
+            const earlyVolumes = volumes.slice(0, 30);
+            if (recentVolumes.length > 0 && earlyVolumes.length > 0) {
+                const recentAvg = recentVolumes.reduce((a, b) => a + b, 0) / recentVolumes.length;
+                const earlyAvg = earlyVolumes.reduce((a, b) => a + b, 0) / earlyVolumes.length;
+                
+                if (recentAvg > earlyAvg * 1.3) {
+                    volumeProfile.volumeTrend = 'increasing';
+                } else if (recentAvg < earlyAvg * 0.7) {
+                    volumeProfile.volumeTrend = 'decreasing';
+                }
+            }
+
+            // Volume distribution analysis
+            const priceRanges = [];
+            for (let i = 0; i < data.length; i++) {
+                const price = (parseFloat(data[i].high) + parseFloat(data[i].low)) / 2;
+                const volume = parseFloat(data[i].volume || 1);
+                priceRanges.push({ price, volume });
+            }
+            
+            // Group by price levels
+            const priceGroups = {};
+            priceRanges.forEach(item => {
+                const priceLevel = Math.round(item.price * 1000) / 1000; // Round to 3 decimal places
+                if (!priceGroups[priceLevel]) {
+                    priceGroups[priceLevel] = { totalVolume: 0, count: 0 };
+                }
+                priceGroups[priceLevel].totalVolume += item.volume;
+                priceGroups[priceLevel].count++;
+            });
+            
+            volumeProfile.volumeDistribution = Object.entries(priceGroups)
+                .map(([price, data]) => ({
+                    price: parseFloat(price),
+                    totalVolume: data.totalVolume,
+                    averageVolume: data.totalVolume / data.count,
+                    count: data.count
+                }))
+                .sort((a, b) => b.totalVolume - a.totalVolume);
+
+            return volumeProfile;
+        }
+
+        // Enhanced potential order block detection with improved precision
+        function isEnhancedPotentialBullishOB(data, index, marketStructure, volumeProfile, minImpulseMove, pipsValue, volumeThreshold) {
+            const current = data[index];
+            const currentClose = parseFloat(current.close);
+            const currentOpen = parseFloat(current.open);
+            const currentVolume = parseFloat(current.volume || 1);
+            const currentHigh = parseFloat(current.high);
+            const currentLow = parseFloat(current.low);
+            
+            // Enhanced bearish candle requirement with body size check
+            if (currentClose >= currentOpen) return false;
+            
+            const bodySize = Math.abs(currentClose - currentOpen);
+            const totalRange = currentHigh - currentLow;
+            if (bodySize / totalRange < 0.3) return false; // Require substantial body
+            
+            // Enhanced volume analysis
+            const volumeStrength = currentVolume / volumeProfile.averageVolume;
+            if (volumeStrength < volumeThreshold) return false;
+            
+            // Check for recent swing low proximity with enhanced criteria
+            const recentSwingLows = marketStructure.swingLows.filter(sw => 
+                Math.abs(sw.index - index) <= 15 && 
+                sw.price <= currentLow &&
+                sw.strength > 1.2
+            );
+            if (recentSwingLows.length === 0) return false;
+            
+            // Enhanced market structure validation
+            if (marketStructure.trend === 'bearish' && marketStructure.strength === 'strong') return false;
+            
+            // Check for proper price action context
+            const prevCandles = data.slice(Math.max(0, index - 5), index);
+            const nextCandles = data.slice(index + 1, Math.min(data.length, index + 6));
+            
+            // Ensure we're not in a strong downtrend
+            const prevLows = prevCandles.map(c => parseFloat(c.low));
+            const nextHighs = nextCandles.map(c => parseFloat(c.high));
+            
+            if (Math.min(...prevLows) < currentLow * 0.999) return false; // No significant lower lows before
+            
+            return true;
+        }
+
+        function isEnhancedPotentialBearishOB(data, index, marketStructure, volumeProfile, minImpulseMove, pipsValue, volumeThreshold) {
+            const current = data[index];
+            const currentClose = parseFloat(current.close);
+            const currentOpen = parseFloat(current.open);
+            const currentVolume = parseFloat(current.volume || 1);
+            const currentHigh = parseFloat(current.high);
+            const currentLow = parseFloat(current.low);
+            
+            // Enhanced bullish candle requirement with body size check
+            if (currentClose <= currentOpen) return false;
+            
+            const bodySize = Math.abs(currentClose - currentOpen);
+            const totalRange = currentHigh - currentLow;
+            if (bodySize / totalRange < 0.3) return false; // Require substantial body
+            
+            // Enhanced volume analysis
+            const volumeStrength = currentVolume / volumeProfile.averageVolume;
+            if (volumeStrength < volumeThreshold) return false;
+            
+            // Check for recent swing high proximity with enhanced criteria
+            const recentSwingHighs = marketStructure.swingHighs.filter(sw => 
+                Math.abs(sw.index - index) <= 15 && 
+                sw.price >= currentHigh &&
+                sw.strength > 1.2
+            );
+            if (recentSwingHighs.length === 0) return false;
+            
+            // Enhanced market structure validation
+            if (marketStructure.trend === 'bullish' && marketStructure.strength === 'strong') return false;
+            
+            // Check for proper price action context
+            const prevCandles = data.slice(Math.max(0, index - 5), index);
+            const nextCandles = data.slice(index + 1, Math.min(data.length, index + 6));
+            
+            // Ensure we're not in a strong uptrend
+            const prevHighs = prevCandles.map(c => parseFloat(c.high));
+            const nextLows = nextCandles.map(c => parseFloat(c.low));
+            
+            if (Math.max(...prevHighs) > currentHigh * 1.001) return false; // No significant higher highs before
+            
+            return true;
+        }
+
+        // Enhanced impulse move analysis with improved precision
+        function analyzeEnhancedImpulseMove(data, index, type, minImpulseMove, pipsValue, lookAhead, marketStructure) {
+            const maxLookAhead = Math.min(lookAhead, data.length - index - 1);
+            let maxMove = 0;
+            let moveEndIndex = -1;
+            let volumeStrength = 0;
+            let marketStructureStrength = 'weak';
+            let swingPoint = null;
+            let momentum = 0;
+            let volatility = 0;
+            
+            if (type === 'bullish') {
+                const startPrice = parseFloat(data[index].low);
+                let highestPrice = startPrice;
+                let moveCandles = [];
+                
+                for (let i = index + 1; i < data.length && i < index + maxLookAhead; i++) {
+                    const high = parseFloat(data[i].high);
+                    const low = parseFloat(data[i].low);
+                    const volume = parseFloat(data[i].volume || 1);
+                    
+                    if (high > highestPrice) {
+                        highestPrice = high;
+                        moveEndIndex = i;
+                        volumeStrength = Math.max(volumeStrength, volume);
+                        moveCandles.push({ high, low, volume });
+                    } else if (low < startPrice * 0.999) {
+                        // Break of structure - stop looking
+                        break;
+                    }
+                }
+                
+                maxMove = (highestPrice - startPrice) / pipsValue;
+                
+                // Enhanced swing high formation with volume confirmation
+                if (moveEndIndex > index + 2 && moveCandles.length > 0) {
+                    const swingHigh = data[moveEndIndex];
+                    const swingHighPrice = parseFloat(swingHigh.high);
+                    let isSwing = true;
+                    
+                    for (let j = 1; j <= 3; j++) {
+                        if (moveEndindex - j >= 0 && parseFloat(data[moveEndindex - j].high) >= swingHighPrice) {
+                            isSwing = false;
+                            break;
+                        }
+                        if (moveEndindex + j < data.length && parseFloat(data[moveEndindex + j].high) >= swingHighPrice) {
+                            isSwing = false;
+                            break;
+                        }
+                    }
+                    
+                    if (isSwing) {
+                        swingPoint = { 
+                            index: moveEndIndex, 
+                            price: swingHighPrice, 
+                            time: swingHigh.datetime,
+                            volume: parseFloat(swingHigh.volume || 1)
+                        };
+                    }
+                }
+                
+                // Calculate momentum and volatility
+                if (moveCandles.length > 0) {
+                    momentum = calculateMomentum(moveCandles, 'bullish');
+                    volatility = calculateVolatility(moveCandles.map(c => c.high));
+                }
+                
+            } else {
+                const startPrice = parseFloat(data[index].high);
+                let lowestPrice = startPrice;
+                let moveCandles = [];
+                
+                for (let i = index + 1; i < data.length && i < index + maxLookAhead; i++) {
+                    const high = parseFloat(data[i].high);
+                    const low = parseFloat(data[i].low);
+                    const volume = parseFloat(data[i].volume || 1);
+                    
+                    if (low < lowestPrice) {
+                        lowestPrice = low;
+                        moveEndIndex = i;
+                        volumeStrength = Math.max(volumeStrength, volume);
+                        moveCandles.push({ high, low, volume });
+                    } else if (high > startPrice * 1.001) {
+                        // Break of structure - stop looking
+                        break;
+                    }
+                }
+                
+                maxMove = (startPrice - lowestPrice) / pipsValue;
+                
+                // Enhanced swing low formation with volume confirmation
+                if (moveEndIndex > index + 2 && moveCandles.length > 0) {
+                    const swingLow = data[moveEndIndex];
+                    const swingLowPrice = parseFloat(swingLow.low);
+                    let isSwing = true;
+                    
+                    for (let j = 1; j <= 3; j++) {
+                        if (moveEndindex - j >= 0 && parseFloat(data[moveEndindex - j].low) <= swingLowPrice) {
+                            isSwing = false;
+                            break;
+                        }
+                        if (moveEndindex + j < data.length && parseFloat(data[moveEndindex + j].low) <= swingLowPrice) {
+                            isSwing = false;
+                            break;
+                        }
+                    }
+                    
+                    if (isSwing) {
+                        swingPoint = { 
+                            index: moveEndIndex, 
+                            price: swingLowPrice, 
+                            time: swingLow.datetime,
+                            volume: parseFloat(swingLow.volume || 1)
+                        };
+                    }
+                }
+                
+                // Calculate momentum and volatility
+                if (moveCandles.length > 0) {
+                    momentum = calculateMomentum(moveCandles, 'bearish');
+                    volatility = calculateVolatility(moveCandles.map(c => c.low));
+                }
+            }
+            
+            const isValid = maxMove >= minImpulseMove && moveEndIndex !== -1;
+            const avgVolume = data.slice(index, index + 10).reduce((sum, d) => sum + parseFloat(d.volume || 1), 0) / 10;
+            volumeStrength = volumeStrength / avgVolume;
+            
+            if (maxMove >= minImpulseMove * 2.5) marketStructureStrength = 'strong';
+            else if (maxMove >= minImpulseMove * 1.8) marketStructureStrength = 'medium';
+            
+            return {
+                isValid,
+                move: maxMove,
+                endIndex: moveEndIndex,
+                volumeStrength,
+                marketStructure: marketStructureStrength,
+                swingPoint,
+                momentum,
+                volatility
+            };
+        }
+
+        // Enhanced FVG detection with improved precision
+        function findPrecisionFVG(data, index, marketStructure) {
+            if (index < 3 || index >= data.length - 3) return null;
+            
+            const prev3 = data[index - 3];
+            const prev2 = data[index - 2];
+            const prev1 = data[index - 1];
+            const current = data[index];
+            const next1 = data[index + 1];
+            const next2 = data[index + 2];
+            const next3 = data[index + 3];
+            
+            const prev3High = parseFloat(prev3.high);
+            const prev3Low = parseFloat(prev3.low);
+            const prev2High = parseFloat(prev2.high);
+            const prev2Low = parseFloat(prev2.low);
+            const prev1High = parseFloat(prev1.high);
+            const prev1Low = parseFloat(prev1.low);
+            const next1High = parseFloat(next1.high);
+            const next1Low = parseFloat(next1.low);
+            const next2High = parseFloat(next2.high);
+            const next2Low = parseFloat(next2.low);
+            const next3High = parseFloat(next3.high);
+            const next3Low = parseFloat(next3.low);
+            
+            // Enhanced Bullish FVG: Previous low > Next high with volume confirmation
+            const prevLow = Math.min(prev1Low, prev2Low, prev3Low);
+            const nextHigh = Math.max(next1High, next2High, next3High);
+            
+            if (prevLow > nextHigh) {
+                const fvgSize = prevLow - nextHigh;
+                const avgVolume = (parseFloat(prev1.volume || 1) + parseFloat(prev2.volume || 1) + parseFloat(prev3.volume || 1)) / 3;
+                const nextAvgVolume = (parseFloat(next1.volume || 1) + parseFloat(next2.volume || 1) + parseFloat(next3.volume || 1)) / 3;
+                
+                return {
+                    type: 'bullish',
+                    top: prevLow,
+                    bottom: nextHigh,
+                    size: fvgSize,
+                    time: current.datetime,
+                    strength: avgVolume > nextAvgVolume * 1.2 ? 'strong' : 'medium',
+                    volumeRatio: avgVolume / nextAvgVolume
+                };
+            }
+            
+            // Enhanced Bearish FVG: Previous high < Next low with volume confirmation
+            const prevHigh = Math.max(prev1High, prev2High, prev3High);
+            const nextLow = Math.min(next1Low, next2Low, next3Low);
+            
+            if (prevHigh < nextLow) {
+                const fvgSize = nextLow - prevHigh;
+                const avgVolume = (parseFloat(prev1.volume || 1) + parseFloat(prev2.volume || 1) + parseFloat(prev3.volume || 1)) / 3;
+                const nextAvgVolume = (parseFloat(next1.volume || 1) + parseFloat(next2.volume || 1) + parseFloat(next3.volume || 1)) / 3;
+                
+                return {
+                    type: 'bearish',
+                    top: nextLow,
+                    bottom: prevHigh,
+                    size: fvgSize,
+                    time: current.datetime,
+                    strength: avgVolume > nextAvgVolume * 1.2 ? 'strong' : 'medium',
+                    volumeRatio: avgVolume / nextAvgVolume
+                };
+            }
+            
+            return null;
+        }
+
+        // Enhanced BOS detection with improved precision
+        function findPrecisionBOS(data, fromIndex, type, marketStructure) {
+            const pricePrecision = getPricePrecision(document.getElementById('symbol').value);
+            const lookback = parseInt(document.getElementById('swingLookback').value);
+            
+            if (type === 'bullish') {
+                // Find the most recent significant swing high before the order block
+                const relevantSwingHighs = marketStructure.swingHighs.filter(sw => 
+                    sw.index < fromIndex && 
+                    sw.index >= fromIndex - lookback &&
+                    sw.strength > 1.3
+                );
+                
+                if (relevantSwingHighs.length === 0) return null;
+                
+                const swingHigh = relevantSwingHighs[relevantSwingHighs.length - 1];
+                
+                // Look for break above this swing high with volume confirmation
+                for (let i = fromIndex; i < data.length; i++) {
+                    const close = parseFloat(data[i].close);
+                    const volume = parseFloat(data[i].volume || 1);
+                    const avgVolume = data.slice(Math.max(0, i - 5), i).reduce((sum, d) => sum + parseFloat(d.volume || 1), 0) / 5;
+                    
+                    if (close > swingHigh.price && volume > avgVolume * 1.2) {
+                        return {
+                            price: swingHigh.price.toFixed(pricePrecision),
+                            index: swingHigh.index,
+                            breakoutIndex: i,
+                            strength: volume > avgVolume * 1.5 ? 'confirmed' : 'weak',
+                            volumeRatio: volume / avgVolume
+                        };
+                    }
+                }
+            } else {
+                // Find the most recent significant swing low before the order block
+                const relevantSwingLows = marketStructure.swingLows.filter(sw => 
+                    sw.index < fromIndex && 
+                    sw.index >= fromIndex - lookback &&
+                    sw.strength > 1.3
+                );
+                
+                if (relevantSwingLows.length === 0) return null;
+                
+                const swingLow = relevantSwingLows[relevantSwingLows.length - 1];
+                
+                // Look for break below this swing low with volume confirmation
+                for (let i = fromIndex; i < data.length; i++) {
+                    const close = parseFloat(data[i].close);
+                    const volume = parseFloat(data[i].volume || 1);
+                    const avgVolume = data.slice(Math.max(0, i - 5), i).reduce((sum, d) => sum + parseFloat(d.volume || 1), 0) / 5;
+                    
+                    if (close < swingLow.price && volume > avgVolume * 1.2) {
+                        return {
+                            price: swingLow.price.toFixed(pricePrecision),
+                            index: swingLow.index,
+                            breakoutIndex: i,
+                            strength: volume > avgVolume * 1.5 ? 'confirmed' : 'weak',
+                            volumeRatio: volume / avgVolume
+                        };
+                    }
+                }
+            }
+            
+            return null;
+        }
+
+        // Enhanced CHOCH detection with improved precision
+        function findPrecisionCHOCH(data, obEntryIndex, obType, marketStructure) {
+            const pricePrecision = getPricePrecision(document.getElementById('symbol').value);
+            const swingLookback = parseInt(document.getElementById('swingLookback').value);
+            
+            if (obEntryIndex < swingLookback || obEntryIndex >= data.length - 1) return null;
+            
+            let chochPrice = null;
+            let chochIndex = -1;
+            let breakoutIndex = -1;
+            
+            if (obType === 'bullish') {
+                // Find the most recent swing high before the order block
+                let priorHigh = -Infinity;
+                let priorHighIndex = -1;
+                
+                for (let i = obEntryIndex - 1; i >= obEntryIndex - swingLookback && i >= 0; i--) {
+                    const high = parseFloat(data[i].high);
+                    const volume = parseFloat(data[i].volume || 1);
+                    const avgVolume = data.slice(Math.max(0, i - 5), i).reduce((sum, d) => sum + parseFloat(d.volume || 1), 0) / 5;
+                    
+                    if (high > priorHigh && volume > avgVolume * 1.1) {
+                        priorHigh = high;
+                        priorHighIndex = i;
+                    }
+                }
+                
+                if (priorHighIndex === -1) return null;
+                
+                // Look for break above this swing high with volume confirmation
+                for (let i = obEntryIndex + 1; i < data.length; i++) {
+                    const close = parseFloat(data[i].close);
+                    const volume = parseFloat(data[i].volume || 1);
+                    const avgVolume = data.slice(Math.max(0, i - 5), i).reduce((sum, d) => sum + parseFloat(d.volume || 1), 0) / 5;
+                    
+                    if (close > priorHigh && volume > avgVolume * 1.2) {
+                        chochPrice = priorHigh;
+                        chochIndex = priorHighIndex;
+                        breakoutIndex = i;
+                        break;
+                    }
+                }
+            } else {
+                // Find the most recent swing low before the order block
+                let priorLow = Infinity;
+                let priorLowIndex = -1;
+                
+                for (let i = obEntryIndex - 1; i >= obEntryIndex - swingLookback && i >= 0; i--) {
+                    const low = parseFloat(data[i].low);
+                    const volume = parseFloat(data[i].volume || 1);
+                    const avgVolume = data.slice(Math.max(0, i - 5), i).reduce((sum, d) => sum + parseFloat(d.volume || 1), 0) / 5;
+                    
+                    if (low < priorLow && volume > avgVolume * 1.1) {
+                        priorLow = low;
+                        priorLowIndex = i;
+                    }
+                }
+                
+                if (priorLowIndex === -1) return null;
+                
+                // Look for break below this swing low with volume confirmation
+                for (let i = obEntryIndex + 1; i < data.length; i++) {
+                    const close = parseFloat(data[i].close);
+                    const volume = parseFloat(data[i].volume || 1);
+                    const avgVolume = data.slice(Math.max(0, i - 5), i).reduce((sum, d) => sum + parseFloat(d.volume || 1), 0) / 5;
+                    
+                    if (close < priorLow && volume > avgVolume * 1.2) {
+                        chochPrice = priorLow;
+                        chochIndex = priorLowIndex;
+                        breakoutIndex = i;
+                        break;
+                    }
+                }
+            }
+            
+            if (chochPrice !== null) {
+                const volume = parseFloat(data[breakoutIndex].volume || 1);
+                const avgVolume = data.slice(Math.max(0, breakoutIndex - 5), breakoutIndex).reduce((sum, d) => sum + parseFloat(d.volume || 1), 0) / 5;
+                
+                return {
+                    price: chochPrice.toFixed(pricePrecision),
+                    index: chochIndex,
+                    breakoutIndex: breakoutIndex,
+                    strength: volume > avgVolume * 1.5 ? 'confirmed' : 'weak',
+                    volumeRatio: volume / avgVolume
+                };
+            }
+            
+            return null;
+        }
+
+        // Enhanced mitigation detection with improved precision
+        function isPrecisionMitigation(orderBlock, currentIndex, data, mitigationMethod, threshold) {
+            if (!document.getElementById('checkMitigation').checked) return false;
+            
+            const { type, top, bottom, entryIndex } = orderBlock;
+            
+            for (let i = entryIndex + 1; i < currentIndex; i++) {
+                const candle = data[i];
+                const high = parseFloat(candle.high);
+                const low = parseFloat(candle.low);
+                const close = parseFloat(candle.close);
+                const volume = parseFloat(candle.volume || 1);
+                
+                let mitigationPrice;
+                if (mitigationMethod === 'Close') {
+                    mitigationPrice = close;
+                } else {
+                    mitigationPrice = type === 'bullish' ? low : high;
+                }
+                
+                if (type === 'bullish') {
+                    // Enhanced penetration check with volume confirmation
+                    const penetration = (parseFloat(bottom) - mitigationPrice) / (parseFloat(top) - parseFloat(bottom));
+                    if (penetration > threshold) {
+                        // Check if this is a significant volume candle
+                        const avgVolume = data.slice(Math.max(0, i - 5), i).reduce((sum, d) => sum + parseFloat(d.volume || 1), 0) / 5;
+                        if (volume > avgVolume * 1.1) {
+                            return true;
+                        }
+                    }
+                } else {
+                    // Enhanced penetration check with volume confirmation
+                    const penetration = (mitigationPrice - parseFloat(top)) / (parseFloat(top) - parseFloat(bottom));
+                    if (penetration > threshold) {
+                        // Check if this is a significant volume candle
+                        const avgVolume = data.slice(Math.max(0, i - 5), i).reduce((sum, d) => sum + parseFloat(d.volume || 1), 0) / 5;
+                        if (volume > avgVolume * 1.1) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            
+            return false;
+        }
+
+        // Helper functions for enhanced precision
+        function calculateTrendStrength(prices) {
+            if (prices.length < 2) return 0;
+            
+            const n = prices.length;
+            const x = Array.from({length: n}, (_, i) => i);
+            const y = prices;
+            
+            const sumX = x.reduce((a, b) => a + b, 0);
+            const sumY = y.reduce((a, b) => a + b, 0);
+            const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+            const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
+            
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const avgPrice = sumY / n;
+            
+            return slope / avgPrice; // Normalized slope
+        }
+
+        function calculateVolatility(prices) {
+            if (prices.length < 2) return 0;
+            
+            const mean = prices.reduce((a, b) => a + b, 0) / prices.length;
+            const variance = prices.reduce((sum, price) => sum + Math.pow(price - mean, 2), 0) / prices.length;
+            const stdDev = Math.sqrt(variance);
+            
+            return stdDev / mean; // Coefficient of variation
+        }
+
+        function calculateMomentum(candles, type) {
+            if (candles.length < 2) return 0;
+            
+            let momentum = 0;
+            for (let i = 1; i < candles.length; i++) {
+                const prev = candles[i - 1];
+                const curr = candles[i];
+                
+                if (type === 'bullish') {
+                    momentum += (curr.high - prev.high) / prev.high;
+                } else {
+                    momentum += (prev.low - curr.low) / prev.low;
+                }
+            }
+            
+            return momentum / (candles.length - 1);
+        }
+
+        // Run Backtest Module
+        function runBacktest(orderBlocks, data, stopLossPips, takeProfitPips, backtestFreshOnly, pipsValue) {
+            let totalTrades = 0;
+            let winningTrades = 0;
+            let losingTrades = 0;
+            let totalPips = 0;
+            let currentPips = 0;
+            let maxDrawdown = 0;
+            let peakPips = 0;
+
+            orderBlocks.forEach(ob => {
+                if (backtestFreshOnly && !ob.isFresh) {
+                    return;
+                }
+                const entryIndex = ob.entryIndex;
+                if (entryIndex >= data.length - 1) {
+                    return;
+                }
+                let entryPrice = parseFloat(ob.avg);
+                let slPrice;
+                let tpPrice;
+                if (ob.type === 'bullish') {
+                    slPrice = entryPrice - (stopLossPips * pipsValue);
+                    tpPrice = entryPrice + (takeProfitPips * pipsValue);
+                } else {
+                    slPrice = entryPrice + (stopLossPips * pipsValue);
+                    tpPrice = entryPrice - (takeProfitPips * pipsValue);
+                }
+                let tradeOutcome = 'pending';
+                let pipsGained = 0;
+                for (let i = entryIndex + 1; i < data.length; i++) {
+                    const currentHigh = parseFloat(data[i].high);
+                    const currentLow = parseFloat(data[i].low);
+                    if (ob.type === 'bullish') {
+                        if (currentLow <= slPrice) {
+                            tradeOutcome = 'loss';
+                            pipsGained = (entryPrice - slPrice) / pipsValue * -1;
+                            break;
+                        }
+                        if (currentHigh >= tpPrice) {
+                            tradeOutcome = 'win';
+                            pipsGained = (tpPrice - entryPrice) / pipsValue;
+                            break;
+                        }
+                    } else {
+                        if (currentHigh >= slPrice) {
+                            tradeOutcome = 'loss';
+                            pipsGained = (slPrice - entryPrice) / pipsValue * -1;
+                            break;
+                        }
+                        if (currentLow <= tpPrice) {
+                            tradeOutcome = 'win';
+                            pipsGained = (entryPrice - tpPrice) / pipsValue;
+                            break;
+                        }
+                    }
+                }
+                if (tradeOutcome === 'win' || tradeOutcome === 'loss') {
+                    totalTrades++;
+                    if (tradeOutcome === 'win') {
+                        winningTrades++;
+                    } else {
+                        losingTrades++;
+                    }
+                    totalPips += pipsGained;
+                    currentPips += pipsGained;
+                    peakPips = Math.max(peakPips, currentPips);
+                    maxDrawdown = Math.max(maxDrawdown, peakPips - currentPips);
+                }
+            });
+
+            const winRate = totalTrades > 0 ? ((winningTrades / totalTrades) * 100).toFixed(2) : 0;
+            return {
+                totalTrades,
+                winningTrades,
+                losingTrades,
+                winRate,
+                totalPips: totalPips.toFixed(2),
+                maxDrawdown: maxDrawdown.toFixed(2),
+            };
+        }
+
+        // Update Backtesting Results in UI
+        function updateBacktestingResults(results) {
+            document.getElementById('totalTrades').textContent = results.totalTrades;
+            document.getElementById('winningTrades').textContent = results.winningTrades;
+            document.getElementById('losingTrades').textContent = results.losingTrades;
+            document.getElementById('winRate').textContent = `${results.winRate}%`;
+            document.getElementById('totalPips').textContent = results.totalPips;
+            document.getElementById('maxDrawdown').textContent = results.maxDrawdown;
+        }
+
+        // Render Order Blocks
+        function renderOrderBlocks(blocksToRender) {
+            const orderBlocksGrid = document.getElementById('orderBlocksGrid');
+            orderBlocksGrid.innerHTML = '';
+            if (blocksToRender.length === 0) {
+                orderBlocksGrid.innerHTML = '<p style="color: var(--text-secondary); text-align: center; grid-column: 1 / -1;">No order blocks found with the current settings.</p>';
+                return;
+            }
+            blocksToRender.forEach(ob => {
+                const card = document.createElement('div');
+                card.className = `order-block-card ${ob.type}`;
+                
+                const triggerEventInfo = ob.triggerEvent ? 
+                    `<div class="detail-item">
+                        <span class="detail-label">Trigger Event</span>
+                        <span class="detail-value">${ob.triggerEvent} at ${ob.triggerPrice}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Trigger Time</span>
+                        <span class="detail-value">${moment(ob.triggerTime).format('MMM D, HH:mm')}</span>
+                    </div>` : '';
+                
+                card.innerHTML = `
+                    <div class="order-block-header">
+                        <div class="order-block-type">
+                            ${ob.type === 'bullish' ? '🟢 Bullish OB' : '🔴 Bearish OB'}
+                            <span class="strength-badge ${ob.strength}">${ob.strength}</span>
+                        </div>
+                        <div class="timestamp" style="font-size: 12px; color: var(--text-secondary);">
+                            ${moment(ob.time).format('MMM D, HH:mm')}
+                        </div>
+                    </div>
+                    <div class="order-block-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Open</span>
+                            <span class="detail-value">${ob.open}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Close</span>
+                            <span class="detail-value">${ob.close}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">OB Top</span>
+                            <span class="detail-value">${ob.top}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">OB Bottom</span>
+                            <span class="detail-value">${ob.bottom}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Average Price</span>
+                            <span class="detail-value">${ob.avg}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Impulse Move</span>
+                            <span class="detail-value">${ob.impulseMove} pips</span>
+                        </div>
+                        ${triggerEventInfo}
+                    </div>
+                    <div class="validation-indicators">
+                        <div class="validation-indicator ${ob.isFresh ? 'valid' : 'invalid'}">
+                            ${ob.isFresh ? '✨ Fresh' : '🚧 Mitigated'}
+                        </div>
+                        <div class="validation-indicator ${ob.triggerEvent ? 'valid' : 'invalid'}">
+                            ${ob.triggerEvent ? `✅ ${ob.triggerEvent} Trigger` : '❌ No Trigger Event'}
+                        </div>
+                    </div>
+                `;
+                orderBlocksGrid.appendChild(card);
+            });
+        }
+
+        // Filter order blocks
+        function filterBlocks(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`.filter-tab[onclick="filterBlocks('${filter}')"]`).classList.add('active');
+            let filtered = [];
+            if (filter === 'all') {
+                filtered = orderBlocks;
+            } else if (filter === 'bullish' || filter === 'bearish') {
+                filtered = orderBlocks.filter(ob => ob.type === filter);
+            } else if (filter === 'fresh') {
+                filtered = orderBlocks.filter(ob => ob.isFresh);
+            } else if (filter === 'mitigated') {
+                filtered = orderBlocks.filter(ob => !ob.isFresh);
+            } else if (filter === 'strong') {
+                filtered = orderBlocks.filter(ob => ob.strength === 'Strong');
+            }
+            renderOrderBlocks(filtered);
+        }
+
+        // Setup alerts for order blocks
+        function setupOrderBlockAlerts(orderBlocks, data) {
+            const latestBlock = orderBlocks[0];
+            if (latestBlock) {
+                if (latestBlock.isFresh) {
+                    showStatus(`${latestBlock.type.toUpperCase()} order block formed at ${moment(latestBlock.time).format('MMM D, HH:mm')}`, 'success');
+                } else {
+                    showStatus(`${latestBlock.type.toUpperCase()} order block mitigated at ${moment(latestBlock.time).format('MMM D, HH:mm')}`, 'warning');
+                }
+            }
+        }
+
+        // Save settings
+        function saveSettings() {
+            const settings = {
+                symbol: document.getElementById('symbol').value,
+                timeframe: document.getElementById('timeframe').value,
+                outputsize: document.getElementById('outputsize').value,
+                volumePivotLength: document.getElementById('volumePivotLength') ? document.getElementById('volumePivotLength').value : undefined,
+                volumeThreshold: document.getElementById('volumeThreshold') ? document.getElementById('volumeThreshold').value : undefined,
+                impulseLookAhead: document.getElementById('impulseLookAhead').value,
+                maxOrderBlocks: document.getElementById('maxOrderBlocks').value,
+                minImpulseMove: document.getElementById('minImpulseMove').value,
+                swingLookback: document.getElementById('swingLookback').value,
+                mitigationThreshold: document.getElementById('mitigationThreshold').value,
+                stopLossPips: document.getElementById('stopLossPips').value,
+                takeProfitPips: document.getElementById('takeProfitPips').value,
+                validateWithBOS: document.getElementById('validateWithBOS').checked,
+                validateWithCHOCH: document.getElementById('validateWithCHOCH').checked,
+                requireFVG: document.getElementById('requireFVG').checked,
+                checkMitigation: document.getElementById('checkMitigation').checked,
+                enhancedDetection: document.getElementById('enhancedDetection').checked,
+                backtestFreshOnly: document.getElementById('backtestFreshOnly').checked
+            };
+            localStorage.setItem('forexAnalyzerSettings', JSON.stringify(settings));
+        }
+
+        // Load settings
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem('forexAnalyzerSettings'));
+            if (settings) {
+                document.getElementById('symbol').value = settings.symbol || 'EUR/USD';
+                document.getElementById('timeframe').value = settings.timeframe || '1h';
+                document.getElementById('outputsize').value = settings.outputsize || '500';
+                if(document.getElementById('volumePivotLength')) document.getElementById('volumePivotLength').value = settings.volumePivotLength || '5';
+                if(document.getElementById('volumeThreshold')) document.getElementById('volumeThreshold').value = settings.volumeThreshold || '1.2';
+                document.getElementById('impulseLookAhead').value = settings.impulseLookAhead || '20';
+                document.getElementById('maxOrderBlocks').value = settings.maxOrderBlocks || '3';
+                document.getElementById('minImpulseMove').value = settings.minImpulseMove || '15';
+                document.getElementById('swingLookback').value = settings.swingLookback || '20';
+                document.getElementById('mitigationThreshold').value = settings.mitigationThreshold || '10';
+                document.getElementById('stopLossPips').value = settings.stopLossPips || '20';
+                document.getElementById('takeProfitPips').value = settings.takeProfitPips || '60';
+                document.getElementById('validateWithBOS').checked = settings.validateWithBOS !== false;
+                document.getElementById('validateWithCHOCH').checked = settings.validateWithCHOCH !== false;
+                document.getElementById('requireFVG').checked = settings.requireFVG !== false;
+                document.getElementById('checkMitigation').checked = settings.checkMitigation !== false;
+                document.getElementById('enhancedDetection').checked = settings.enhancedDetection !== false;
+                document.getElementById('backtestFreshOnly').checked = settings.backtestFreshOnly !== false;
+                
+                // Update display values
+                if(document.getElementById('volumePivotLengthValue')) document.getElementById('volumePivotLengthValue').textContent = settings.volumePivotLength || '5';
+                if(document.getElementById('volumeThresholdValue')) document.getElementById('volumeThresholdValue').textContent = settings.volumeThreshold || '1.2';
+                document.getElementById('impulseLookAheadValue').textContent = settings.impulseLookAhead || '20';
+                document.getElementById('maxOrderBlocksValue').textContent = settings.maxOrderBlocks || '3';
+                document.getElementById('minImpulseMoveValue').textContent = settings.minImpulseMove || '15';
+                document.getElementById('swingLookbackValue').textContent = settings.swingLookback || '20';
+                document.getElementById('mitigationThresholdValue').textContent = settings.mitigationThreshold || '10';
+                document.getElementById('stopLossPipsValue').textContent = settings.stopLossPips || '20';
+                document.getElementById('takeProfitPipsValue').textContent = settings.takeProfitPips || '60';
+                
+                document.querySelectorAll('.pair-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelector(`.pair-btn[onclick="selectPair('${settings.symbol || 'EUR/USD'}')"]`)?.classList.add('active');
+            }
+        }
+
+        // Input event listeners with debouncing
+        document.querySelectorAll('input[type="range"]').forEach(input => {
+            input.addEventListener('input', debounce((e) => {
+                document.getElementById(`${e.target.id}Value`).textContent = e.target.value;
+                saveSettings();
+            }, 300));
+        });
+
+        document.querySelectorAll('input:not([type="range"]), select').forEach(el => {
+            el.addEventListener('change', saveSettings);
+        });
+
+        // Theme toggle
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            document.body.classList.toggle('light-theme');
+            localStorage.setItem('theme', document.body.classList.contains('light-theme') ? 'light' : 'dark');
+        });
+
+        // Live updates
+        document.getElementById('liveUpdates').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                liveUpdateInterval = setInterval(() => {
+                    document.getElementById('fetchData').click();
+                }, 30000);
+                showStatus('Live updates enabled.', 'info');
+            } else {
+                clearInterval(liveUpdateInterval);
+                showStatus('Live updates disabled.', 'info');
+            }
+        });
+
+        // Fetch data
+        async function fetchData(offset = 0, limit = parseInt(document.getElementById('outputsize').value)) {
+            const startTime = performance.now();
+            const apiKey = document.getElementById('apiKey').value;
+            const symbol = document.getElementById('symbol').value;
+            const timeframe = document.getElementById('timeframe').value;
+
+            if (!apiKey) {
+                showStatus('Please enter your TwelveData API Key.', 'error');
+                return;
+            }
+
+            showStatus('Fetching data...', 'loading');
+            document.getElementById('fetchData').disabled = true;
+            document.getElementById('analyzeChart').disabled = true;
+            document.getElementById('openTradingViewChart').disabled = true;
+            document.getElementById('runBacktest').disabled = true;
+            document.getElementById('analysisPanel').style.display = 'none';
+            document.getElementById('backtestResultsPanel').style.display = 'none';
+
+            try {
+                const response = await fetch(`${TWELVE_DATA_BASE_URL}/time_series?symbol=${symbol}&interval=${timeframe}&outputsize=${limit}${offset ? `&start_date=${moment().subtract(offset, 'days').format('YYYY-MM-DD')}` : ''}&apikey=${apiKey}`);
+                const data = await response.json();
+                if (data.status === 'ok' && data.values && data.values.length > 0) {
+                    forexData = (forexData || []).concat(data.values.reverse());
+                    showStatus(`Successfully fetched ${data.values.length} bars for ${symbol}.`, 'success');
+                    document.getElementById('apiStatus').className = 'api-status connected';
+                    document.getElementById('apiStatus').innerHTML = '<span>🟢</span> Connected';
+                    document.getElementById('analyzeChart').disabled = false;
+                    document.getElementById('openTradingViewChart').disabled = false;
+                    document.getElementById('totalBars').textContent = forexData.length;
+                    renderChart(forexData);
+                } else {
+                    forexData = null;
+                    showStatus(`Error fetching data: ${data.message || 'No data found.'}`, 'error');
+                    document.getElementById('apiStatus').className = 'api-status disconnected';
+                    document.getElementById('apiStatus').innerHTML = '<span>🔴</span> Disconnected';
+                    document.getElementById('totalBars').textContent = '0';
+                    clearChart();
+                }
+            } catch (error) {
+                forexData = null;
+                showStatus(`Network error: ${error.message}`, 'error');
+                document.getElementById('apiStatus').className = 'api-status disconnected';
+                document.getElementById('apiStatus').innerHTML = '<span>🔴</span> Disconnected';
+                document.getElementById('totalBars').textContent = '0';
+                clearChart();
+            } finally {
+                document.getElementById('fetchData').disabled = false;
+                const endTime = performance.now();
+                document.getElementById('fetchTime').textContent = `${Math.round(endTime - startTime)} ms`;
+            }
+        }
+
+        // Analyze chart
+        document.getElementById('analyzeChart').addEventListener('click', () => {
+            if (!forexData) {
+                showStatus('Please fetch forex data first.', 'warning');
+                return;
+            }
+            showStatus('Analyzing order blocks...', 'loading');
+            document.getElementById('analyzeChart').disabled = true;
+            orderBlocks = findOrderBlocks(forexData);
+            showStatus(`Found ${orderBlocks.length} order blocks.`, 'success');
+            document.getElementById('bullishBlocks').textContent = orderBlocks.filter(ob => ob.type === 'bullish').length;
+            document.getElementById('bearishBlocks').textContent = orderBlocks.filter(ob => ob.type === 'bearish').length;
+            document.getElementById('freshBlocks').textContent = orderBlocks.filter(ob => ob.isFresh).length;
+            document.getElementById('mitigatedBlocks').textContent = orderBlocks.filter(ob => !ob.isFresh).length;
+            const strongestOB = orderBlocks.find(ob => ob.strength === 'Strong');
+            if (strongestOB) {
+                document.getElementById('strongestLevel').textContent = strongestOB.type === 'bullish' ? strongestOB.low : strongestOB.high;
+            } else {
+                document.getElementById('strongestLevel').textContent = 'N/A';
+            }
+            renderOrderBlocks(orderBlocks);
+            document.getElementById('analysisPanel').style.display = 'block';
+            document.getElementById('analyzeChart').disabled = false;
+            document.getElementById('runBacktest').disabled = false;
+            updateChartWithOrderBlocks(forexData, orderBlocks);
+            setupOrderBlockAlerts(orderBlocks, forexData);
+        });
+
+
+
+        // Run Backtest
+        document.getElementById('runBacktest').addEventListener('click', () => {
+            if (!orderBlocks || orderBlocks.length === 0) {
+                showStatus('No order blocks to backtest. Please analyze first.', 'warning');
+                return;
+            }
+            showStatus('Running backtest...', 'loading');
+            document.getElementById('runBacktest').disabled = true;
+            const stopLossPips = parseFloat(document.getElementById('stopLossPips').value);
+            const takeProfitPips = parseFloat(document.getElementById('takeProfitPips').value);
+            const backtestFreshOnly = document.getElementById('backtestFreshOnly').checked;
+            const pipsValue = getPips(document.getElementById('symbol').value);
+            const results = runBacktest(orderBlocks, forexData, stopLossPips, takeProfitPips, backtestFreshOnly, pipsValue);
+            updateBacktestingResults(results);
+            document.getElementById('backtestResultsPanel').style.display = 'block';
+            showStatus('Backtest complete.', 'success');
+            document.getElementById('runBacktest').disabled = false;
+        });
+
+        // Export order blocks
+        document.getElementById('exportBlocks').addEventListener('click', () => {
+            if (!orderBlocks.length) {
+                showStatus('No order blocks to export.', 'warning');
+                return;
+            }
+            const headers = ['Type', 'Time', 'Open', 'Close', 'High', 'Low', 'Top', 'Bottom', 'Average', 'Impulse Move', 'Strength', 'FVG', 'BOS', 'CHOCH', 'Status'];
+            const csvRows = [headers.join(',')];
+            orderBlocks.forEach(ob => {
+                const row = [
+                    ob.type,
+                    moment(ob.time).format('YYYY-MM-DD HH:mm'),
+                    ob.open,
+                    ob.close,
+                    ob.high,
+                    ob.low,
+                    ob.top,
+                    ob.bottom,
+                    ob.avg,
+                    ob.impulseMove,
+                    ob.strength,
+                    ob.fvg ? ob.fvg.size : 'N/A',
+                    ob.bos ? ob.bos.price : 'N/A',
+                    ob.choch ? ob.choch.price : 'N/A',
+                    ob.isFresh ? 'Fresh' : 'Mitigated'
+                ];
+                csvRows.push(row.join(','));
+            });
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `order_blocks_${document.getElementById('symbol').value.replace('/', '_')}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // Select Forex Pair
+        function selectPair(pair) {
+            document.getElementById('symbol').value = pair;
+            document.querySelectorAll('.pair-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.pair-btn[onclick="selectPair('${pair}')"]`).classList.add('active');
+            saveSettings();
+        }
+
+        // Open TradingView Chart
+        document.getElementById('openTradingViewChart').addEventListener('click', () => {
+            if (!forexData || !orderBlocks || orderBlocks.length === 0) {
+                showStatus('Please fetch and analyze data first.', 'warning');
+                return;
+            }
+            
+            try {
+                // Validate and format candles for lightweight-charts
+                const candles = forexData.map(d => {
+                    const time = Math.floor(new Date(d.datetime).getTime() / 1000);
+                    const open = parseFloat(d.open);
+                    const high = parseFloat(d.high);
+                    const low = parseFloat(d.low);
+                    const close = parseFloat(d.close);
+                    
+                    // Validate data
+                    if (isNaN(time) || isNaN(open) || isNaN(high) || isNaN(low) || isNaN(close)) {
+                        throw new Error(`Invalid data point: ${JSON.stringify(d)}`);
+                    }
+                    
+                    return { time, open, high, low, close };
+                });
+                
+                // Validate order blocks
+                const validOrderBlocks = orderBlocks.map(ob => {
+                    if (!ob.time || !ob.high || !ob.low) {
+                        console.warn('Invalid order block:', ob);
+                        return null;
+                    }
+                    return ob;
+                }).filter(ob => ob !== null);
+                
+                console.log(`Preparing to open chart with ${candles.length} candles and ${validOrderBlocks.length} order blocks`);
+                
+                if (candles.length === 0) {
+                    showStatus('No valid candle data available.', 'error');
+                    return;
+                }
+                
+                // Check if user wants to use fallback chart (hold Shift while clicking)
+                const useFallback = event.shiftKey;
+                const chartUrl = useFallback ? '/lightweight_chart?fallback=true' : '/lightweight_chart';
+                
+                // Open new tab with our custom lightweight chart
+                const win = window.open(chartUrl, '_blank');
+                
+                if (!win) {
+                    showStatus('Popup blocked. Please allow popups for this site.', 'error');
+                    return;
+                }
+                
+                // Wait for the new window to load, then post data
+                const sendData = () => {
+                    try {
+                        if (win && !win.closed) {
+                            const data = {
+                                candles: candles,
+                                orderBlocks: validOrderBlocks,
+                                symbol: document.getElementById('symbol').value
+                            };
+                            
+                            console.log('Sending data to chart window:', {
+                                candlesCount: candles.length,
+                                orderBlocksCount: validOrderBlocks.length,
+                                symbol: data.symbol,
+                                useFallback: useFallback
+                            });
+                            win.postMessage(data, '*');
+                            
+                            showStatus(`TradingView-style chart opened successfully! ${useFallback ? '(Fallback mode)' : ''}`, 'success');
+                        } else {
+                            setTimeout(sendData, 100);
+                        }
+                    } catch (error) {
+                        console.error('Error sending data to chart window:', error);
+                        showStatus('Error sending data to chart: ' + error.message, 'error');
+                    }
+                };
+                
+                // Listen for messages from the chart window
+                const messageHandler = (event) => {
+                    if (event.data && event.data.type === 'REQUEST_CHART_DATA') {
+                        console.log('Chart window requested data');
+                        sendData();
+                    }
+                };
+                
+                window.addEventListener('message', messageHandler);
+                
+                // Clean up event listener after a delay
+                setTimeout(() => {
+                    window.removeEventListener('message', messageHandler);
+                }, 10000);
+                
+                setTimeout(sendData, 1000); // Give the new tab time to load
+                showStatus(`Opening TradingView-style chart in new tab... ${useFallback ? '(Fallback mode)' : ''}`, 'info');
+                
+            } catch (error) {
+                console.error('Error opening TradingView chart:', error);
+                showStatus('Error opening chart: ' + error.message, 'error');
+            }
+        });
+
+        // Render Chart
+        function renderChart(data) {
+            const startTime = performance.now();
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                showStatus('No valid data to render chart.', 'error');
+                return;
+            }
+            if (chart) {
+                chart.destroy();
+            }
+            const datasets = [{
+                label: 'Candlestick Chart',
+                data: data.map(d => ({
+                    x: moment(d.datetime).valueOf(),
+                    o: parseFloat(d.open),
+                    h: parseFloat(d.high),
+                    l: parseFloat(d.low),
+                    c: parseFloat(d.close)
+                })),
+                borderColor: '#555',
+                borderWidth: 1,
+                color: {
+                    up: 'var(--success-color)', // Bullish candles
+                    down: 'var(--danger-color)', // Bearish candles
+                    unchanged: 'var(--text-secondary)'
+                }
+            }];
+            chart = new Chart(ctx, {
+                type: 'candlestick',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: { color: 'var(--text-secondary)' }
+                        },
+                        tooltip: {
+                            enabled: true,
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    const { o, h, l, c } = context.raw;
+                                    return [
+                                        `Open: ${o.toFixed(getPricePrecision(document.getElementById('symbol').value))}`,
+                                        `High: ${h.toFixed(getPricePrecision(document.getElementById('symbol').value))}`,
+                                        `Low: ${l.toFixed(getPricePrecision(document.getElementById('symbol').value))}`,
+                                        `Close: ${c.toFixed(getPricePrecision(document.getElementById('symbol').value))}`
+                                    ];
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {} // Annotations will be populated by updateChartWithOrderBlocks
+                        },
+                        decimation: {
+                            enabled: true,
+                            algorithm: 'lttb',
+                            samples: 1000
+                        },
+                        zoom: {
+                            zoom: {
+                                wheel: {
+                                    enabled: true,
+                                    modifierKey: null, // Default: zoom both axes
+                                },
+                                drag: {
+                                    enabled: true,
+                                    modifierKey: null // Drag to pan both axes
+                                },
+                                pinch: { enabled: true },
+                                mode: 'xy', // Both axes
+                                overScaleMode: null, // Let modifier keys control axis
+                                onZoom: function({chart, event}) {
+                                    // If Ctrl is held, zoom Y only
+                                    if (event && event.ctrlKey) {
+                                        chart.options.plugins.zoom.zoom.mode = 'y';
+                                    } else if (event && event.shiftKey) {
+                                        chart.options.plugins.zoom.zoom.mode = 'x';
+                                    } else {
+                                        chart.options.plugins.zoom.zoom.mode = 'xy';
+                                    }
+                                },
+                                onZoomComplete: function({chart}) {
+                                    // Reset to both axes after zoom
+                                    chart.options.plugins.zoom.zoom.mode = 'xy';
+                                }
+                            },
+                            pan: {
+                                enabled: true,
+                                mode: 'xy',
+                                modifierKey: null // Drag to pan both axes
+                            },
+                            limits: {
+                                x: { minRange: 5 },
+                                y: { minRange: 0.0001 }
+                            }
+                        },
+                        crosshair: false // We'll add a custom crosshair below
+                    },
+                    layout: {
+                        backgroundColor: '#fff' // White chart area
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: getTimeUnit(document.getElementById('timeframe').value),
+                                displayFormats: {
+                                    minute: 'HH:mm',
+                                    hour: 'HH:mm',
+                                    day: 'MMM D',
+                                    week: 'MMM D'
+                                }
+                            },
+                            ticks: { color: '#888' },
+                            grid: { color: 'rgba(0,0,0,0.06)' }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            position: 'right', // Move price axis to the right
+                            ticks: { color: '#888' },
+                            grid: { color: 'rgba(0,0,0,0.06)' }
+                        }
+                    }
+                }
+            });
+            // Add crosshair interactivity
+            addChartCrosshair(chart);
+            const endTime = performance.now();
+            document.getElementById('renderTime').textContent = `${Math.round(endTime - startTime)} ms`;
+        }
+
+        // Zoom In/Out/Reset handlers
+        document.getElementById('zoomInBtn').onclick = function() {
+            if (chart) chart.zoom(1.2);
+        };
+        document.getElementById('zoomOutBtn').onclick = function() {
+            if (chart) chart.zoom(0.8);
+        };
+        document.getElementById('resetZoomBtn').onclick = function() {
+            if (chart) chart.resetZoom();
+        };
+
+        // Add a simple crosshair to Chart.js
+        function addChartCrosshair(chart) {
+            const canvas = chart.canvas;
+            let vLine = null;
+            let hLine = null;
+            function removeLines() {
+                if (vLine) vLine.remove();
+                if (hLine) hLine.remove();
+                vLine = null;
+                hLine = null;
+            }
+            canvas.addEventListener('mousemove', function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                removeLines();
+                vLine = document.createElement('div');
+                hLine = document.createElement('div');
+                vLine.className = 'chartjs-crosshair-line';
+                hLine.className = 'chartjs-crosshair-line';
+                vLine.style.left = x + 'px';
+                vLine.style.top = 0;
+                vLine.style.width = '1px';
+                vLine.style.height = canvas.height + 'px';
+                vLine.style.background = 'rgba(55,66,250,0.2)';
+                vLine.style.position = 'absolute';
+                vLine.style.pointerEvents = 'none';
+                vLine.style.zIndex = 10;
+                hLine.style.left = 0;
+                hLine.style.top = y + 'px';
+                hLine.style.width = canvas.width + 'px';
+                hLine.style.height = '1px';
+                hLine.style.background = 'rgba(55,66,250,0.2)';
+                hLine.style.position = 'absolute';
+                hLine.style.pointerEvents = 'none';
+                hLine.style.zIndex = 10;
+                canvas.parentNode.appendChild(vLine);
+                canvas.parentNode.appendChild(hLine);
+            });
+            canvas.addEventListener('mouseleave', function() {
+                removeLines();
+            });
+        }
+
+        // Get time unit for Chart.js based on timeframe
+        function getTimeUnit(timeframe) {
+            switch (timeframe) {
+                case '1min':
+                case '5min':
+                case '15min':
+                case '30min':
+                    return 'minute';
+                case '1h':
+                case '4h':
+                    return 'hour';
+                case '1day':
+                    return 'day';
+                case '1week':
+                    return 'week';
+                default:
+                    return 'hour';
+            }
+        }
+
+        // Clear chart
+        function clearChart() {
+            if (chart) {
+                chart.destroy();
+                chart = null;
+            }
+            document.getElementById('totalBars').textContent = '0';
+            document.getElementById('bullishBlocks').textContent = '0';
+            document.getElementById('bearishBlocks').textContent = '0';
+            document.getElementById('freshBlocks').textContent = '0';
+            document.getElementById('mitigatedBlocks').textContent = '0';
+            document.getElementById('strongestLevel').textContent = '0.0000';
+            
+            // Clear volume profile data
+            volumeProfile = null;
+            document.getElementById('volumeProfilePanel').style.display = 'none';
+            document.getElementById('pocPrice').textContent = '0.0000';
+            document.getElementById('vahPrice').textContent = '0.0000';
+            document.getElementById('valPrice').textContent = '0.0000';
+            document.getElementById('totalVolume').textContent = '0';
+            document.getElementById('avgVolume').textContent = '0';
+            document.getElementById('volumeNodes').textContent = '0';
+        }
+
+        // Update chart with order blocks and annotations
+        function updateChartWithOrderBlocks(data, orderBlocks) {
+            if (!chart || !orderBlocks || orderBlocks.length === 0) return;
+
+            const annotations = {};
+            orderBlocks.forEach((ob, index) => {
+                const time = moment(ob.time).valueOf();
+                const color = ob.type === 'bullish' ? 'rgba(0, 255, 136, 0.2)' : 'rgba(255, 71, 87, 0.2)';
+                const borderColor = ob.type === 'bullish' ? 'var(--success-color)' : 'var(--danger-color)';
+                const labelColor = ob.strength === 'Strong' ? 'var(--success-color)' : ob.strength === 'Medium' ? 'var(--warning-color)' : 'var(--danger-color)';
+
+                // Order Block Box
+                annotations[`ob${index}`] = {
+                    type: 'box',
+                    xMin: time,
+                    xMax: time + (moment(data[Math.min(ob.entryIndex + 1, data.length - 1)].datetime).valueOf() - time) / 2,
+                    yMin: parseFloat(ob.bottom),
+                    yMax: parseFloat(ob.top),
+                    backgroundColor: color,
+                    borderColor: borderColor,
+                    borderWidth: 1,
+                    label: {
+                        content: `${ob.type.charAt(0).toUpperCase() + ob.type.slice(1)} OB (${ob.strength}) - ${ob.triggerEvent || 'Manual'}`,
+                        display: true,
+                        position: 'center',
+                        color: labelColor,
+                        font: { size: 12 }
+                    }
+                };
+
+                // Trigger Event Annotation (CHOCH/BOS)
+                if (ob.triggerEvent && ob.triggerTime) {
+                    const triggerTime = moment(ob.triggerTime).valueOf();
+                    const triggerColor = ob.triggerEvent === 'CHOCH' ? 'var(--accent-color)' : 'var(--warning-color)';
+                    const triggerLabel = ob.triggerEvent === 'CHOCH' ? 'CHOCH' : 'BOS';
+                    
+                    annotations[`trigger${index}`] = {
+                        type: 'line',
+                        xMin: triggerTime,
+                        xMax: triggerTime,
+                        yMin: parseFloat(ob.triggerPrice),
+                        yMax: parseFloat(ob.triggerPrice),
+                        borderColor: triggerColor,
+                        borderWidth: 3,
+                        borderDash: [5, 5],
+                        label: {
+                            content: triggerLabel,
+                            display: true,
+                            position: 'end',
+                            color: triggerColor,
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            font: { size: 12, weight: 'bold' }
+                        }
+                    };
+                    
+                    // Connection line from OB to trigger event
+                    annotations[`connection${index}`] = {
+                        type: 'line',
+                        xMin: time,
+                        xMax: triggerTime,
+                        yMin: parseFloat(ob.avg),
+                        yMax: parseFloat(ob.triggerPrice),
+                        borderColor: triggerColor,
+                        borderWidth: 1,
+                        borderDash: [3, 3]
+                    };
+                }
+            });
+
+            chart.options.plugins.annotation.annotations = annotations;
+            chart.update();
+        }
+
+        // Initialize on DOM load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load saved API key
+            const savedApiKey = localStorage.getItem('twelveDataApiKey');
+            if (savedApiKey) {
+                document.getElementById('apiKey').value = savedApiKey;
+                document.getElementById('apiStatus').className = 'api-status connected';
+                document.getElementById('apiStatus').innerHTML = '<span>🟢</span> Connected';
+            }
+
+            // API key input handler
+            document.getElementById('apiKey').addEventListener('input', (event) => {
+                localStorage.setItem('twelveDataApiKey', event.target.value);
+                if (event.target.value) {
+                    document.getElementById('apiStatus').className = 'api-status connected';
+                    document.getElementById('apiStatus').innerHTML = '<span>🟢</span> Connected';
+                } else {
+                    document.getElementById('apiStatus').className = 'api-status disconnected';
+                    document.getElementById('apiStatus').innerHTML = '<span>🔴</span> Disconnected';
+                }
+            });
+
+            // Load theme preference
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-theme');
+            }
+
+            // Load saved settings
+            loadSettings();
+
+            // Initial fetch if API key exists
+            if (document.getElementById('apiKey').value) {
+                document.getElementById('fetchData').click();
+            }
+
+            // Register Chart.js plugins
+            if (window['chartjs-plugin-zoom']) {
+                Chart.register(window['chartjs-plugin-zoom']);
+            } else {
+                console.error('chartjs-plugin-zoom not loaded');
+            }
+            if (window['chartjs-plugin-annotation']) {
+                Chart.register(window['chartjs-plugin-annotation']);
+            } else {
+                console.error('chartjs-plugin-annotation not loaded');
+            }
+            // chartjs-chart-financial automatically registers the candlestick chart type
+
+            // Click event for fetch data button
+            document.getElementById('fetchData').addEventListener('click', () => {
+                forexData = null; // Reset forex data
+                orderBlocks = []; // Reset order blocks
+                document.getElementById('analysisPanel').style.display = 'none';
+                document.getElementById('backtestResultsPanel').style.display = 'none';
+                fetchData();
+            });
+        });
+
+        // Volume Profile Analysis Functions
+        function calculateVolumeProfile(data) {
+            const periods = parseInt(document.getElementById('volumeProfilePeriods').value);
+            const levels = parseInt(document.getElementById('volumeProfileLevels').value);
+            const threshold = parseFloat(document.getElementById('volumeProfileThreshold').value) / 100;
+            const pricePrecision = getPricePrecision(document.getElementById('symbol').value);
+            
+            // Use the most recent data
+            const recentData = data.slice(-periods);
+            if (recentData.length === 0) return null;
+            
+            // Calculate price range
+            const prices = recentData.flatMap(d => [
+                parseFloat(d.high),
+                parseFloat(d.low),
+                parseFloat(d.open),
+                parseFloat(d.close)
+            ]);
+            
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const priceRange = maxPrice - minPrice;
+            const levelHeight = priceRange / levels;
+            
+            // Create price levels
+            const priceLevels = [];
+            for (let i = 0; i <= levels; i++) {
+                const price = minPrice + (i * levelHeight);
+                priceLevels.push({
+                    price: price.toFixed(pricePrecision),
+                    volume: 0,
+                    trades: 0,
+                    highVolume: false,
+                    isNode: false
+                });
+            }
+            
+            // Distribute volume across price levels
+            let totalVolume = 0;
+            recentData.forEach(candle => {
+                const high = parseFloat(candle.high);
+                const low = parseFloat(candle.low);
+                const volume = parseFloat(candle.volume || 1);
+                totalVolume += volume;
+                
+                // Find which levels this candle touches
+                const startLevel = Math.floor((low - minPrice) / levelHeight);
+                const endLevel = Math.ceil((high - minPrice) / levelHeight);
+                
+                for (let i = Math.max(0, startLevel); i <= Math.min(levels, endLevel); i++) {
+                    priceLevels[i].volume += volume;
+                    priceLevels[i].trades++;
+                }
+            });
+            
+            // Calculate average volume and identify high volume levels
+            const avgVolume = totalVolume / (levels + 1);
+            priceLevels.forEach(level => {
+                level.highVolume = level.volume > avgVolume * (1 + threshold);
+            });
+            
+            // Find volume nodes (POC, VAH, VAL)
+            const volumeNodes = findVolumeNodes(priceLevels, minPrice, maxPrice, pricePrecision);
+            
+            return {
+                levels: priceLevels,
+                nodes: volumeNodes,
+                totalVolume: totalVolume,
+                averageVolume: avgVolume,
+                priceRange: {
+                    min: minPrice.toFixed(pricePrecision),
+                    max: maxPrice.toFixed(pricePrecision)
+                },
+                settings: {
+                    periods,
+                    levels,
+                    threshold
+                }
+            };
+        }
+
+        function findVolumeNodes(priceLevels, minPrice, maxPrice, pricePrecision) {
+            // Find Point of Control (highest volume level)
+            let pocLevel = priceLevels[0];
+            priceLevels.forEach(level => {
+                if (level.volume > pocLevel.volume) {
+                    pocLevel = level;
+                }
+            });
+            
+            // Find Volume Area High and Low (70% of total volume)
+            const totalVolume = priceLevels.reduce((sum, level) => sum + level.volume, 0);
+            const targetVolume = totalVolume * 0.7;
+            
+            let currentVolume = 0;
+            let vahIndex = priceLevels.length - 1;
+            let valIndex = 0;
+            
+            // Find VAH (Volume Area High)
+            for (let i = priceLevels.length - 1; i >= 0; i--) {
+                currentVolume += priceLevels[i].volume;
+                if (currentVolume >= targetVolume) {
+                    vahIndex = i;
+                    break;
+                }
+            }
+            
+            // Find VAL (Volume Area Low)
+            currentVolume = 0;
+            for (let i = 0; i < priceLevels.length; i++) {
+                currentVolume += priceLevels[i].volume;
+                if (currentVolume >= targetVolume) {
+                    valIndex = i;
+                    break;
+                }
+            }
+            
+            // Mark nodes
+            pocLevel.isNode = true;
+            priceLevels[vahIndex].isNode = true;
+            priceLevels[valIndex].isNode = true;
+            
+            return {
+                poc: {
+                    price: pocLevel.price,
+                    volume: pocLevel.volume,
+                    index: priceLevels.indexOf(pocLevel)
+                },
+                vah: {
+                    price: priceLevels[vahIndex].price,
+                    volume: priceLevels[vahIndex].volume,
+                    index: vahIndex
+                },
+                val: {
+                    price: priceLevels[valIndex].price,
+                    volume: priceLevels[valIndex].volume,
+                    index: valIndex
+                }
+            };
+        }
+
+        function renderVolumeProfile(volumeProfileData) {
+            const volumeProfileGrid = document.getElementById('volumeProfileGrid');
+            volumeProfileGrid.innerHTML = '';
+            
+            if (!volumeProfileData || !volumeProfileData.levels) {
+                volumeProfileGrid.innerHTML = '<p style="color: var(--text-secondary); text-align: center; grid-column: 1 / -1;">No volume profile data available.</p>';
+                return;
+            }
+            
+            // Update summary stats
+            document.getElementById('pocPrice').textContent = volumeProfileData.nodes.poc.price;
+            document.getElementById('vahPrice').textContent = volumeProfileData.nodes.vah.price;
+            document.getElementById('valPrice').textContent = volumeProfileData.nodes.val.price;
+            document.getElementById('totalVolume').textContent = volumeProfileData.totalVolume.toLocaleString();
+            document.getElementById('avgVolume').textContent = Math.round(volumeProfileData.averageVolume).toLocaleString();
+            document.getElementById('volumeNodes').textContent = volumeProfileData.levels.filter(l => l.isNode).length;
+            
+            // Filter levels based on current filter
+            let levelsToShow = volumeProfileData.levels;
+            if (currentVolumeFilter === 'high') {
+                levelsToShow = volumeProfileData.levels.filter(l => l.highVolume);
+            } else if (currentVolumeFilter === 'low') {
+                levelsToShow = volumeProfileData.levels.filter(l => !l.highVolume);
+            } else if (currentVolumeFilter === 'nodes') {
+                levelsToShow = volumeProfileData.levels.filter(l => l.isNode);
+            }
+            
+            if (levelsToShow.length === 0) {
+                volumeProfileGrid.innerHTML = '<p style="color: var(--text-secondary); text-align: center; grid-column: 1 / -1;">No volume levels match the current filter.</p>';
+                return;
+            }
+            
+            // Sort by volume (highest first)
+            levelsToShow.sort((a, b) => b.volume - a.volume);
+            
+            levelsToShow.forEach(level => {
+                const card = document.createElement('div');
+                card.className = `order-block-card ${level.highVolume ? 'bullish' : 'bearish'}`;
+                
+                const volumePercentage = ((level.volume / volumeProfileData.totalVolume) * 100).toFixed(2);
+                const nodeIndicator = level.isNode ? 
+                    `<span class="validation-indicator valid">🎯 Volume Node</span>` : '';
+                
+                const nodeType = level.isNode ? getNodeType(level, volumeProfileData.nodes) : '';
+                
+                card.innerHTML = `
+                    <div class="order-block-header">
+                        <div class="order-block-type">
+                            ${level.highVolume ? '📊 High Volume' : '📉 Low Volume'}
+                            ${nodeType ? `<span class="strength-badge Strong">${nodeType}</span>` : ''}
+                        </div>
+                        <div class="timestamp" style="font-size: 12px; color: var(--text-secondary);">
+                            ${volumePercentage}% of total volume
+                        </div>
+                    </div>
+                    <div class="order-block-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Price Level</span>
+                            <span class="detail-value">${level.price}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Volume</span>
+                            <span class="detail-value">${level.volume.toLocaleString()}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Volume %</span>
+                            <span class="detail-value">${volumePercentage}%</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Trades</span>
+                            <span class="detail-value">${level.trades}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Avg Volume</span>
+                            <span class="detail-value">${Math.round(level.volume / level.trades).toLocaleString()}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Status</span>
+                            <span class="detail-value">${level.highVolume ? 'High Activity' : 'Low Activity'}</span>
+                        </div>
+                    </div>
+                    <div class="validation-indicators">
+                        <div class="validation-indicator ${level.highVolume ? 'valid' : 'invalid'}">
+                            ${level.highVolume ? '📊 High Volume Level' : '📉 Low Volume Level'}
+                        </div>
+                        <div class="validation-indicator ${level.trades > 10 ? 'valid' : 'invalid'}">
+                            ${level.trades > 10 ? '✅ Active Level' : '❌ Inactive Level'}
+                        </div>
+                        ${nodeIndicator}
+                    </div>
+                `;
+                volumeProfileGrid.appendChild(card);
+            });
+        }
+
+        function getNodeType(level, nodes) {
+            if (level.price === nodes.poc.price) return 'POC';
+            if (level.price === nodes.vah.price) return 'VAH';
+            if (level.price === nodes.val.price) return 'VAL';
+            return '';
+        }
+
+        function filterVolumeProfile(filter) {
+            currentVolumeFilter = filter;
+            document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`.filter-tab[onclick="filterVolumeProfile('${filter}')"]`).classList.add('active');
+            
+            if (volumeProfile) {
+                renderVolumeProfile(volumeProfile);
+            }
+        }
+
+        function updateChartWithVolumeProfile(data, volumeProfileData) {
+            if (!chart || !volumeProfileData || !document.getElementById('showVolumeProfile').checked) return;
+            
+            const annotations = chart.options.plugins.annotation.annotations || {};
+            
+            // Clear existing volume profile annotations
+            Object.keys(annotations).forEach(key => {
+                if (key.startsWith('vp_')) {
+                    delete annotations[key];
+                }
+            });
+            
+            if (document.getElementById('showVolumeNodes').checked) {
+                // Add POC line
+                annotations['vp_poc'] = {
+                    type: 'line',
+                    xMin: moment(data[0].datetime).valueOf(),
+                    xMax: moment(data[data.length - 1].datetime).valueOf(),
+                    yMin: parseFloat(volumeProfileData.nodes.poc.price),
+                    yMax: parseFloat(volumeProfileData.nodes.poc.price),
+                    borderColor: 'var(--accent-color)',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    label: {
+                        content: 'POC',
+                        display: true,
+                        position: 'start',
+                        color: 'var(--accent-color)',
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        font: { size: 12, weight: 'bold' }
+                    }
+                };
+                
+                // Add VAH line
+                annotations['vp_vah'] = {
+                    type: 'line',
+                    xMin: moment(data[0].datetime).valueOf(),
+                    xMax: moment(data[data.length - 1].datetime).valueOf(),
+                    yMin: parseFloat(volumeProfileData.nodes.vah.price),
+                    yMax: parseFloat(volumeProfileData.nodes.vah.price),
+                    borderColor: 'var(--success-color)',
+                    borderWidth: 2,
+                    borderDash: [3, 3],
+                    label: {
+                        content: 'VAH',
+                        display: true,
+                        position: 'start',
+                        color: 'var(--success-color)',
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        font: { size: 12, weight: 'bold' }
+                    }
+                };
+                
+                // Add VAL line
+                annotations['vp_val'] = {
+                    type: 'line',
+                    xMin: moment(data[0].datetime).valueOf(),
+                    xMax: moment(data[data.length - 1].datetime).valueOf(),
+                    yMin: parseFloat(volumeProfileData.nodes.val.price),
+                    yMax: parseFloat(volumeProfileData.nodes.val.price),
+                    borderColor: 'var(--danger-color)',
+                    borderWidth: 2,
+                    borderDash: [3, 3],
+                    label: {
+                        content: 'VAL',
+                        display: true,
+                        position: 'start',
+                        color: 'var(--danger-color)',
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        font: { size: 12, weight: 'bold' }
+                    }
+                };
+            }
+            
+            if (document.getElementById('showVolumeZones').checked) {
+                // Add volume zones (high volume areas)
+                const highVolumeLevels = volumeProfileData.levels.filter(l => l.highVolume);
+                highVolumeLevels.forEach((level, index) => {
+                    annotations[`vp_zone_${index}`] = {
+                        type: 'box',
+                        xMin: moment(data[0].datetime).valueOf(),
+                        xMax: moment(data[data.length - 1].datetime).valueOf(),
+                        yMin: parseFloat(level.price) - 0.0001,
+                        yMax: parseFloat(level.price) + 0.0001,
+                        backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                        borderColor: 'var(--accent-color)',
+                        borderWidth: 1,
+                        label: {
+                            content: `Vol: ${((level.volume / volumeProfileData.totalVolume) * 100).toFixed(1)}%`,
+                            display: true,
+                            position: 'center',
+                            color: 'var(--accent-color)',
+                            font: { size: 10 }
+                        }
+                    };
+                });
+            }
+            
+            chart.options.plugins.annotation.annotations = annotations;
+            chart.update();
+        }
+
+        // Find order block before CHOCH event
+        function findOrderBlockBeforeCHOCH(data, choch, marketStructure, volumeProfile, minImpulseMove, pipsValue, volumeThreshold, impulseLookAhead) {
+            // Look for the order block BEFORE the CHOCH event
+            // For bullish CHOCH, look for the last bearish candle before the CHOCH
+            // For bearish CHOCH, look for the last bullish candle before the CHOCH
+            
+            const startIndex = choch.index - 1; // Start from the candle before CHOCH
+            const maxLookBack = Math.min(impulseLookAhead, startIndex);
+            
+            if (choch.type === 'bullish') {
+                // Look for the last bearish candle before the bullish CHOCH
+                for (let i = startIndex; i >= Math.max(0, startIndex - maxLookBack); i--) {
+                    const current = data[i];
+                    const currentClose = parseFloat(current.close);
+                    const currentOpen = parseFloat(current.open);
+                    const currentHigh = parseFloat(current.high);
+                    const currentLow = parseFloat(current.low);
+                    
+                    // Check if this is a bearish candle
+                    if (currentClose < currentOpen) {
+                        const bodySize = Math.abs(currentClose - currentOpen);
+                        const totalRange = currentHigh - currentLow;
+                        
+                        // Require substantial body (at least 30% of total range)
+                        if (bodySize / totalRange >= 0.3) {
+                            // Check for impulse move after this candle (which should lead to CHOCH)
+                            const impulseAnalysis = analyzeImpulseMoveAfterCandle(data, i, 'bullish', minImpulseMove, pipsValue, impulseLookAhead);
+                            if (impulseAnalysis.isValid) {
+                                return {
+                                    type: 'bullish',
+                                    time: current.datetime,
+                                    open: currentOpen,
+                                    close: currentClose,
+                                    high: currentHigh,
+                                    low: currentLow,
+                                    top: currentHigh,
+                                    bottom: currentLow,
+                                    entryIndex: i,
+                                    impulseMove: impulseAnalysis.move.toFixed(2),
+                                    avg: ((currentHigh + currentLow) / 2),
+                                    triggerEvent: 'CHOCH',
+                                    triggerPrice: choch.price,
+                                    triggerTime: choch.time,
+                                    chochIndex: choch.index
+                                };
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Look for the last bullish candle before the bearish CHOCH
+                for (let i = startIndex; i >= Math.max(0, startIndex - maxLookBack); i--) {
+                    const current = data[i];
+                    const currentClose = parseFloat(current.close);
+                    const currentOpen = parseFloat(current.open);
+                    const currentHigh = parseFloat(current.high);
+                    const currentLow = parseFloat(current.low);
+                    
+                    // Check if this is a bullish candle
+                    if (currentClose > currentOpen) {
+                        const bodySize = Math.abs(currentClose - currentOpen);
+                        const totalRange = currentHigh - currentLow;
+                        
+                        // Require substantial body (at least 30% of total range)
+                        if (bodySize / totalRange >= 0.3) {
+                            // Check for impulse move after this candle (which should lead to CHOCH)
+                            const impulseAnalysis = analyzeImpulseMoveAfterCandle(data, i, 'bearish', minImpulseMove, pipsValue, impulseLookAhead);
+                            if (impulseAnalysis.isValid) {
+                                return {
+                                    type: 'bearish',
+                                    time: current.datetime,
+                                    open: currentOpen,
+                                    close: currentClose,
+                                    high: currentHigh,
+                                    low: currentLow,
+                                    top: currentHigh,
+                                    bottom: currentLow,
+                                    entryIndex: i,
+                                    impulseMove: impulseAnalysis.move.toFixed(2),
+                                    avg: ((currentHigh + currentLow) / 2),
+                                    triggerEvent: 'CHOCH',
+                                    triggerPrice: choch.price,
+                                    triggerTime: choch.time,
+                                    chochIndex: choch.index
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return null;
+        }
+
+        // Find order block before BOS event
+        function findOrderBlockBeforeBOS(data, bos, marketStructure, minImpulseMove, pipsValue, impulseLookAhead) {
+            // Look for the order block BEFORE the BOS event
+            // For bullish BOS, look for the last bearish candle before the BOS
+            // For bearish BOS, look for the last bullish candle before the BOS
+            
+            const startIndex = bos.index - 1; // Start from the candle before BOS
+            const maxLookBack = Math.min(impulseLookAhead, startIndex);
+            
+            if (bos.type === 'bullish') {
+                // Look for the last bearish candle before the bullish BOS
+                for (let i = startIndex; i >= Math.max(0, startIndex - maxLookBack); i--) {
+                    const current = data[i];
+                    const currentClose = parseFloat(current.close);
+                    const currentOpen = parseFloat(current.open);
+                    const currentHigh = parseFloat(current.high);
+                    const currentLow = parseFloat(current.low);
+                    
+                    // Check if this is a bearish candle
+                    if (currentClose < currentOpen) {
+                        const bodySize = Math.abs(currentClose - currentOpen);
+                        const totalRange = currentHigh - currentLow;
+                        
+                        // Require substantial body (at least 30% of total range)
+                        if (bodySize / totalRange >= 0.3) {
+                            // Check for impulse move after this candle (which should lead to BOS)
+                            const impulseAnalysis = analyzeImpulseMoveAfterCandle(data, i, 'bullish', minImpulseMove, pipsValue, impulseLookAhead);
+                            if (impulseAnalysis.isValid) {
+                                return {
+                                    type: 'bullish',
+                                    time: current.datetime,
+                                    open: currentOpen,
+                                    close: currentClose,
+                                    high: currentHigh,
+                                    low: currentLow,
+                                    top: currentHigh,
+                                    bottom: currentLow,
+                                    entryIndex: i,
+                                    impulseMove: impulseAnalysis.move.toFixed(2),
+                                    avg: ((currentHigh + currentLow) / 2),
+                                    triggerEvent: 'BOS',
+                                    triggerPrice: bos.price,
+                                    triggerTime: bos.time,
+                                    bosIndex: bos.index
+                                };
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Look for the last bullish candle before the bearish BOS
+                for (let i = startIndex; i >= Math.max(0, startIndex - maxLookBack); i--) {
+                    const current = data[i];
+                    const currentClose = parseFloat(current.close);
+                    const currentOpen = parseFloat(current.open);
+                    const currentHigh = parseFloat(current.high);
+                    const currentLow = parseFloat(current.low);
+                    
+                    // Check if this is a bullish candle
+                    if (currentClose > currentOpen) {
+                        const bodySize = Math.abs(currentClose - currentOpen);
+                        const totalRange = currentHigh - currentLow;
+                        
+                        // Require substantial body (at least 30% of total range)
+                        if (bodySize / totalRange >= 0.3) {
+                            // Check for impulse move after this candle (which should lead to BOS)
+                            const impulseAnalysis = analyzeImpulseMoveAfterCandle(data, i, 'bearish', minImpulseMove, pipsValue, impulseLookAhead);
+                            if (impulseAnalysis.isValid) {
+                                return {
+                                    type: 'bearish',
+                                    time: current.datetime,
+                                    open: currentOpen,
+                                    close: currentClose,
+                                    high: currentHigh,
+                                    low: currentLow,
+                                    top: currentHigh,
+                                    bottom: currentLow,
+                                    entryIndex: i,
+                                    impulseMove: impulseAnalysis.move.toFixed(2),
+                                    avg: ((currentHigh + currentLow) / 2),
+                                    triggerEvent: 'BOS',
+                                    triggerPrice: bos.price,
+                                    triggerTime: bos.time,
+                                    bosIndex: bos.index
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return null;
+        }
+
+        // Find all valid order blocks at every swing/impulse (TradingView style)
+        function findOrderBlocks(data) {
+            const minImpulseMove = parseFloat(document.getElementById('minImpulseMove').value);
+            const impulseLookAhead = parseInt(document.getElementById('impulseLookAhead').value);
+            const pipsValue = getPips(document.getElementById('symbol').value);
+            const pricePrecision = getPricePrecision(document.getElementById('symbol').value);
+            const swingLookback = parseInt(document.getElementById('swingLookback').value);
+            const foundOrderBlocks = [];
+
+            // Helper: is swing high/low
+            function isSwingHigh(idx, lookback) {
+                const high = parseFloat(data[idx].high);
+                for (let i = 1; i <= lookback; i++) {
+                    if (idx - i >= 0 && parseFloat(data[idx - i].high) >= high) return false;
+                    if (idx + i < data.length && parseFloat(data[idx + i].high) >= high) return false;
+                }
+                return true;
+            }
+            function isSwingLow(idx, lookback) {
+                const low = parseFloat(data[idx].low);
+                for (let i = 1; i <= lookback; i++) {
+                    if (idx - i >= 0 && parseFloat(data[idx - i].low) <= low) return false;
+                    if (idx + i < data.length && parseFloat(data[idx + i].low) <= low) return false;
+                }
+                return true;
+            }
+
+            // For each swing high, look for bearish OB
+            for (let i = swingLookback; i < data.length - swingLookback - impulseLookAhead; i++) {
+                if (isSwingHigh(i, swingLookback)) {
+                    // Look for impulse down after swing high
+                    let impulse = 0;
+                    let moveEnd = -1;
+                    const startPrice = parseFloat(data[i].low);
+                    let lowest = startPrice;
+                    for (let j = 1; j <= impulseLookAhead && i + j < data.length; j++) {
+                        const low = parseFloat(data[i + j].low);
+                        if (low < lowest) {
+                            lowest = low;
+                            moveEnd = i + j;
+                        }
+                    }
+                    impulse = (startPrice - lowest) / pipsValue;
+                    if (impulse >= minImpulseMove && moveEnd !== -1) {
+                        // Find last bullish candle before the move
+                        for (let k = i; k >= i - swingLookback && k >= 0; k--) {
+                            const open = parseFloat(data[k].open);
+                            const close = parseFloat(data[k].close);
+                            if (close > open) {
+                                foundOrderBlocks.push({
+                                    type: 'bearish',
+                                    time: data[k].datetime,
+                                    open: open,
+                                    close: close,
+                                    high: parseFloat(data[k].high),
+                                    low: parseFloat(data[k].low),
+                                    top: parseFloat(data[k].high),
+                                    bottom: parseFloat(data[k].low),
+                                    entryIndex: k,
+                                    impulseMove: impulse.toFixed(2),
+                                    avg: ((parseFloat(data[k].high) + parseFloat(data[k].low)) / 2),
+                                    triggerEvent: 'SwingHigh',
+                                    triggerPrice: data[i].high,
+                                    triggerTime: data[i].datetime
+                                });
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            // For each swing low, look for bullish OB
+            for (let i = swingLookback; i < data.length - swingLookback - impulseLookAhead; i++) {
+                if (isSwingLow(i, swingLookback)) {
+                    // Look for impulse up after swing low
+                    let impulse = 0;
+                    let moveEnd = -1;
+                    const startPrice = parseFloat(data[i].high);
+                    let highest = startPrice;
+                    for (let j = 1; j <= impulseLookAhead && i + j < data.length; j++) {
+                        const high = parseFloat(data[i + j].high);
+                        if (high > highest) {
+                            highest = high;
+                            moveEnd = i + j;
+                        }
+                    }
+                    impulse = (highest - startPrice) / pipsValue;
+                    if (impulse >= minImpulseMove && moveEnd !== -1) {
+                        // Find last bearish candle before the move
+                        for (let k = i; k >= i - swingLookback && k >= 0; k--) {
+                            const open = parseFloat(data[k].open);
+                            const close = parseFloat(data[k].close);
+                            if (close < open) {
+                                foundOrderBlocks.push({
+                                    type: 'bullish',
+                                    time: data[k].datetime,
+                                    open: open,
+                                    close: close,
+                                    high: parseFloat(data[k].high),
+                                    low: parseFloat(data[k].low),
+                                    top: parseFloat(data[k].high),
+                                    bottom: parseFloat(data[k].low),
+                                    entryIndex: k,
+                                    impulseMove: impulse.toFixed(2),
+                                    avg: ((parseFloat(data[k].high) + parseFloat(data[k].low)) / 2),
+                                    triggerEvent: 'SwingLow',
+                                    triggerPrice: data[i].low,
+                                    triggerTime: data[i].datetime
+                                });
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            // Remove duplicates (same candle for multiple swings)
+            const uniqueBlocks = [];
+            const seen = new Set();
+            for (const ob of foundOrderBlocks) {
+                const key = `${ob.type}-${ob.time}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueBlocks.push(ob);
+                }
+            }
+            // Sort by recency
+            uniqueBlocks.sort((a, b) => new Date(b.time) - new Date(a.time));
+            return uniqueBlocks;
+        }
+
+        // Update chart with order blocks (extend until mitigated)
+        function updateChartWithOrderBlocks(data, orderBlocks) {
+            if (!chart || !orderBlocks || orderBlocks.length === 0) return;
+            const annotations = {};
+            orderBlocks.forEach((ob, index) => {
+                const time = moment(ob.time).valueOf();
+                const color = ob.type === 'bullish' ? 'rgba(0, 255, 136, 0.15)' : 'rgba(255, 71, 87, 0.15)';
+                const borderColor = ob.type === 'bullish' ? 'var(--success-color)' : 'var(--danger-color)';
+                // Find mitigation point (wick-based)
+                let xMax = moment(data[data.length - 1].datetime).valueOf();
+                for (let i = ob.entryIndex + 1; i < data.length; i++) {
+                    if (ob.type === 'bullish' && parseFloat(data[i].low) < ob.low) {
+                        xMax = moment(data[i].datetime).valueOf();
+                        break;
+                    }
+                    if (ob.type === 'bearish' && parseFloat(data[i].high) > ob.high) {
+                        xMax = moment(data[i].datetime).valueOf();
+                        break;
+                    }
+                }
+                annotations[`ob${index}`] = {
+                    type: 'box',
+                    xMin: time,
+                    xMax: xMax,
+                    yMin: parseFloat(ob.low),
+                    yMax: parseFloat(ob.high),
+                    backgroundColor: color,
+                    borderColor: borderColor,
+                    borderWidth: 1,
+                    label: {
+                        content: ob.type === 'bullish' ? 'Bullish OB' : 'Bearish OB',
+                        display: true,
+                        position: 'center',
+                        color: borderColor,
+                        font: { size: 12 }
+                    }
+                };
+            });
+            chart.options.plugins.annotation.annotations = annotations;
+            chart.update();
+        }
+
+        // Double-click to reset zoom
+        ctx.canvas.addEventListener('dblclick', function() {
+            if (chart) chart.resetZoom();
+        });
+    </script>
+</body>
+</html>

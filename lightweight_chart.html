@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forex Order Blocks - TradingView Chart</title>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            color: #131722;
+            overflow: hidden;
+        }
+        
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: #ffffff;
+            border-bottom: 1px solid #e1e3e6;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #131722;
+        }
+        
+        .header .symbol {
+            margin-left: 20px;
+            font-size: 14px;
+            color: #787b86;
+        }
+        
+        .header .stats {
+            margin-left: auto;
+            display: flex;
+            gap: 20px;
+            font-size: 12px;
+        }
+        
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .stat-value {
+            font-weight: 600;
+            color: #131722;
+        }
+        
+        .stat-label {
+            color: #787b86;
+            font-size: 10px;
+        }
+        
+        #chart {
+            position: fixed;
+            top: 50px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100vw;
+            height: calc(100vh - 50px);
+        }
+        
+        .legend {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #e1e3e6;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+            margin-right: 8px;
+        }
+        
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 16px;
+            color: #787b86;
+        }
+        
+        .error {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #ef5350;
+        }
+        
+        .ai-controls {
+            margin-left: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .ai-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .ai-btn-primary {
+            background-color: #2962FF;
+            color: #ffffff;
+        }
+        
+        .ai-btn-secondary {
+            background-color: #f0f3fa;
+            color: #787b86;
+            border: 1px solid #e1e3e6;
+        }
+        
+        .ai-btn-icon {
+            margin-right: 4px;
+        }
+        
+        .ai-spinner {
+            margin-left: 4px;
+        }
+        
+        /* AI Analysis Overlay Styles */
+        .ai-analysis-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .ai-analysis-panel {
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .ai-analysis-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e3e6;
+            padding: 15px 20px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .ai-analysis-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #131722;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #787b86;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .close-btn:hover {
+            color: #131722;
+        }
+        
+        .ai-analysis-content {
+            padding: 20px;
+        }
+        
+        .analysis-section {
+            margin-bottom: 20px;
+        }
+        
+        .analysis-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .analysis-section h4 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #2962FF;
+            border-bottom: 1px solid #e1e3e6;
+            padding-bottom: 5px;
+        }
+        
+        .analysis-section p {
+            margin: 5px 0;
+            font-size: 13px;
+            color: #131722;
+        }
+        
+        .quick-insights .ai-analysis-content {
+            padding: 15px 20px;
+        }
+        
+        .insight-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f3fa;
+            font-size: 13px;
+        }
+        
+        .insight-item:last-child {
+            border-bottom: none;
+        }
+        
+        .error-panel {
+            border-left: 4px solid #ef5350;
+        }
+        
+        .error-message {
+            color: #ef5350;
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        .ai-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        /* Chart Control Toolbar */
+        .chart-toolbar {
+            position: fixed;
+            left: 10px;
+            top: 60px;
+            background: #ffffff;
+            border: 1px solid #e1e3e6;
+            border-radius: 6px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .toolbar-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #131722;
+            transition: background-color 0.2s;
+        }
+        
+        .toolbar-btn:hover {
+            background-color: #f0f3fa;
+        }
+        
+        .toolbar-btn.active {
+            background-color: #2962FF;
+            color: white;
+        }
+        
+        /* Timeframe Selector */
+        .timeframe-selector {
+            position: fixed;
+            top: 60px;
+            left: 70px;
+            background: #ffffff;
+            border: 1px solid #e1e3e6;
+            border-radius: 6px;
+            padding: 4px;
+            display: flex;
+            gap: 2px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .timeframe-btn {
+            padding: 6px 12px;
+            border: none;
+            background: transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #131722;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        
+        .timeframe-btn:hover {
+            background-color: #f0f3fa;
+        }
+        
+        .timeframe-btn.active {
+            background-color: #2962FF;
+            color: white;
+        }
+        
+        /* Symbol Selector */
+        .symbol-selector {
+            position: fixed;
+            top: 60px;
+            left: 300px;
+            background: #ffffff;
+            border: 1px solid #e1e3e6;
+            border-radius: 6px;
+            padding: 8px 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .symbol-dropdown {
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            font-weight: 600;
+            color: #131722;
+            cursor: pointer;
+            outline: none;
+        }
+        
+        /* Trade Panel */
+        .trade-panel {
+            position: fixed;
+            left: 10px;
+            top: 200px;
+            width: 200px;
+            background: #ffffff;
+            border: 1px solid #e1e3e6;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .trade-panel h3 {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #131722;
+        }
+        
+        .trade-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #e1e3e6;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        .trade-btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .trade-btn.buy {
+            background-color: #00ff88;
+            color: #000;
+        }
+        
+        .trade-btn.sell {
+            background-color: #ff4757;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Forex Order Block Analyzer</h1>
+        <div class="symbol" id="symbolDisplay">Loading...</div>
+        
+        <!-- AI Analysis Controls -->
+        <div class="ai-controls">
+            <button id="aiAnalyzeBtn" class="ai-btn ai-btn-primary">
+                <span class="ai-btn-icon">[AI]</span>
+                <span class="ai-btn-text">AI Analysis</span>
+                <span id="aiSpinner" class="ai-spinner" style="display: none;">[...]</span>
+            </button>
+            <button id="quickInsightsBtn" class="ai-btn ai-btn-secondary">
+                <span class="ai-btn-icon">[!]</span>
+                <span class="ai-btn-text">Quick Insights</span>
+            </button>
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="totalBars">0</div>
+                <div class="stat-label">Bars</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="bullishBlocks">0</div>
+                <div class="stat-label">Bullish OB</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="bearishBlocks">0</div>
+                <div class="stat-label">Bearish OB</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="freshBlocks">0</div>
+                <div class="stat-label">Fresh</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chart Control Toolbar -->
+    <div class="chart-toolbar">
+        <button class="toolbar-btn" id="cursorTool" title="Cursor">↖</button>
+        <button class="toolbar-btn" id="crosshairTool" title="Crosshair">+</button>
+        <button class="toolbar-btn" id="trendlineTool" title="Trend Line">/</button>
+        <button class="toolbar-btn" id="horizontalTool" title="Horizontal Line">─</button>
+        <button class="toolbar-btn" id="verticalTool" title="Vertical Line">│</button>
+        <button class="toolbar-btn" id="rectangleTool" title="Rectangle">□</button>
+        <button class="toolbar-btn" id="textTool" title="Text">T</button>
+        <button class="toolbar-btn" id="clearTool" title="Clear All">✕</button>
+    </div>
+    
+    <!-- Timeframe Selector -->
+    <div class="timeframe-selector">
+        <button class="timeframe-btn" data-timeframe="1m">1m</button>
+        <button class="timeframe-btn" data-timeframe="5m">5m</button>
+        <button class="timeframe-btn" data-timeframe="15m">15m</button>
+        <button class="timeframe-btn" data-timeframe="30m">30m</button>
+        <button class="timeframe-btn active" data-timeframe="1h">1h</button>
+        <button class="timeframe-btn" data-timeframe="4h">4h</button>
+        <button class="timeframe-btn" data-timeframe="1d">1d</button>
+    </div>
+    
+    <!-- Symbol Selector -->
+    <div class="symbol-selector">
+        <select class="symbol-dropdown" id="symbolSelector">
+            <option value="EUR/USD">EUR/USD</option>
+            <option value="GBP/USD">GBP/USD</option>
+            <option value="USD/JPY">USD/JPY</option>
+            <option value="GBP/JPY">GBP/JPY</option>
+            <option value="EUR/GBP">EUR/GBP</option>
+            <option value="AUD/USD">AUD/USD</option>
+            <option value="USD/CAD">USD/CAD</option>
+            <option value="NZD/USD">NZD/USD</option>
+        </select>
+    </div>
+    
+    <!-- Trade Execution Panel -->
+    <div class="trade-panel">
+        <h3>Trade Execution</h3>
+        <input type="number" class="trade-input" id="lotSize" placeholder="Lot Size" value="0.01" step="0.01">
+        <input type="number" class="trade-input" id="stopLoss" placeholder="Stop Loss (pips)" value="20">
+        <input type="number" class="trade-input" id="takeProfit" placeholder="Take Profit (pips)" value="40">
+        <button class="trade-btn buy" id="buyBtn">BUY</button>
+        <button class="trade-btn sell" id="sellBtn">SELL</button>
+    </div>
+
+    <div id="chart"></div>
+    
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-color" style="background: rgba(0, 255, 136, 0.3); border: 1px solid #00ff88;"></div>
+            <span>Bullish Order Block</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: rgba(255, 71, 87, 0.3); border: 1px solid #ff4757;"></div>
+            <span>Bearish Order Block</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: rgba(255, 215, 0, 0.3); border: 1px solid #ffd700;"></div>
+            <span>CHOCH Trigger</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: rgba(255, 165, 2, 0.3); border: 1px solid #ffa502;"></div>
+            <span>BOS Trigger</span>
+        </div>
+    </div>
+    
+    <div class="loading" id="loading">Loading chart data...</div>
+    <div class="error" id="error" style="display: none;"></div>
+
+    <script>
+        let chart = null;
+        let candleSeries = null;
+        let orderBlockSeries = [];
+        let dataReceived = false;
+        
+        // Initialize chart
+        function initChart() {
+            chart = LightweightCharts.createChart(document.getElementById('chart'), {
+                width: window.innerWidth,
+                height: window.innerHeight - 50,
+                layout: {
+                    background: { color: '#ffffff' },
+                    textColor: '#131722',
+                },
+                grid: {
+                    vertLines: { color: '#f0f3fa' },
+                    horzLines: { color: '#f0f3fa' },
+                },
+                rightPriceScale: {
+                    borderColor: '#e1e3e6',
+                    scaleMargins: {
+                        top: 0.1,
+                        bottom: 0.1,
+                    },
+                },
+                timeScale: {
+                    borderColor: '#e1e3e6',
+                    timeVisible: true,
+                    secondsVisible: false,
+                    rightOffset: 12,
+                    barSpacing: 3,
+                    fixLeftEdge: true,
+                    lockVisibleTimeRangeOnResize: true,
+                    rightBarStaysOnScroll: true,
+                    borderVisible: false,
+                    visible: true,
+                    tickMarkFormatter: (time) => {
+                        const date = new Date(time * 1000);
+                        return date.toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                    },
+                },
+                crosshair: {
+                    mode: LightweightCharts.CrosshairMode.Normal,
+                    vertLine: {
+                        color: '#2962FF',
+                        width: 1,
+                        style: LightweightCharts.LineStyle.Solid,
+                        labelBackgroundColor: '#2962FF',
+                    },
+                    horzLine: {
+                        color: '#2962FF',
+                        width: 1,
+                        style: LightweightCharts.LineStyle.Solid,
+                        labelBackgroundColor: '#2962FF',
+                    },
+                },
+                handleScroll: {
+                    mouseWheel: true,
+                    pressedMouseMove: true,
+                    horzTouchDrag: true,
+                    vertTouchDrag: true,
+                },
+                handleScale: {
+                    axisPressedMouseMove: true,
+                    mouseWheel: true,
+                    pinch: true,
+                },
+            });
+            
+            // Add candlestick series
+            candleSeries = chart.addCandlestickSeries({
+                upColor: '#26a69a',
+                downColor: '#ef5350',
+                borderDownColor: '#ef5350',
+                borderUpColor: '#26a69a',
+                wickDownColor: '#ef5350',
+                wickUpColor: '#26a69a',
+            });
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                chart.resize(window.innerWidth, window.innerHeight - 50);
+            });
+        }
+        
+        // Add order block zones
+        function addOrderBlockZones(orderBlocks) {
+            // Clear existing order block series
+            orderBlockSeries.forEach(series => {
+                chart.removeSeries(series);
+            });
+            orderBlockSeries = [];
+            
+            orderBlocks.forEach((ob, index) => {
+                // Create area series for order block zones
+                const areaSeries = chart.addAreaSeries({
+                    topColor: ob.type === 'bullish' ? 'rgba(0, 255, 136, 0.3)' : 'rgba(255, 71, 87, 0.3)',
+                    bottomColor: ob.type === 'bullish' ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 71, 87, 0.1)',
+                    lineColor: ob.type === 'bullish' ? '#00ff88' : '#ff4757',
+                    lineWidth: 2,
+                    lineType: LightweightCharts.LineType.Solid,
+                    crosshairMarkerVisible: false,
+                    priceLineVisible: false,
+                    lastValueVisible: false,
+                });
+                
+                // Add the order block zone data
+                const obData = [
+                    { time: Math.floor(new Date(ob.time).getTime() / 1000), value: parseFloat(ob.high) },
+                    { time: Math.floor(new Date(ob.time).getTime() / 1000) + 86400, value: parseFloat(ob.high) }, // Extend 1 day
+                ];
+                areaSeries.setData(obData);
+                
+                // Create bottom line for the order block
+                const bottomLineSeries = chart.addLineSeries({
+                    color: ob.type === 'bullish' ? '#00ff88' : '#ff4757',
+                    lineWidth: 2,
+                    lineType: LightweightCharts.LineType.Solid,
+                    crosshairMarkerVisible: false,
+                    priceLineVisible: false,
+                    lastValueVisible: false,
+                });
+                
+                const bottomData = [
+                    { time: Math.floor(new Date(ob.time).getTime() / 1000), value: parseFloat(ob.low) },
+                    { time: Math.floor(new Date(ob.time).getTime() / 1000) + 86400, value: parseFloat(ob.low) },
+                ];
+                bottomLineSeries.setData(bottomData);
+                
+                orderBlockSeries.push(areaSeries, bottomLineSeries);
+                
+                // Add trigger event markers if available
+                if (ob.triggerEvent && ob.triggerTime) {
+                    const triggerColor = ob.triggerEvent === 'CHOCH' ? '#ffd700' : '#ffa502';
+                    const triggerSeries = chart.addLineSeries({
+                        color: triggerColor,
+                        lineWidth: 3,
+                        lineType: LightweightCharts.LineType.Dashed,
+                        crosshairMarkerVisible: true,
+                        priceLineVisible: false,
+                        lastValueVisible: false,
+                    });
+                    
+                    const triggerData = [
+                        { time: Math.floor(new Date(ob.triggerTime).getTime() / 1000), value: parseFloat(ob.triggerPrice) },
+                        { time: Math.floor(new Date(ob.triggerTime).getTime() / 1000) + 3600, value: parseFloat(ob.triggerPrice) },
+                    ];
+                    triggerSeries.setData(triggerData);
+                    
+                    orderBlockSeries.push(triggerSeries);
+                }
+            });
+        }
+        
+        // Update statistics
+        function updateStats(candles, orderBlocks) {
+            document.getElementById('totalBars').textContent = candles.length;
+            document.getElementById('bullishBlocks').textContent = orderBlocks.filter(ob => ob.type === 'bullish').length;
+            document.getElementById('bearishBlocks').textContent = orderBlocks.filter(ob => ob.type === 'bearish').length;
+            document.getElementById('freshBlocks').textContent = orderBlocks.filter(ob => ob.isFresh).length;
+        }
+        
+        // Listen for data from the main window
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.candles && event.data.orderBlocks) {
+                const { candles, orderBlocks, symbol } = event.data;
+                
+                // Hide loading
+                document.getElementById('loading').style.display = 'none';
+                
+                // Update symbol display and current symbol for AI analysis
+                currentSymbol = symbol || 'EUR/USD';
+                document.getElementById('symbolDisplay').textContent = currentSymbol;
+                
+                // Initialize chart if not already done
+                if (!chart) {
+                    initChart();
+                }
+                
+                // Set candlestick data
+                candleSeries.setData(candles);
+                
+                // Add order block zones
+                addOrderBlockZones(orderBlocks);
+                
+                // Update statistics
+                updateStats(candles, orderBlocks);
+                
+                // Fit content
+                chart.timeScale().fitContent();
+                
+                dataReceived = true;
+            }
+        });
+        
+        // Handle errors
+        window.addEventListener('error', (event) => {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').textContent = 'Error loading chart: ' + event.message;
+        });
+        
+        // Chart control variables
+        let currentSymbol = 'EUR/USD';
+        let currentTimeframe = '1h';
+        let isAnalyzing = false;
+        let activeTool = 'cursor';
+        let drawingMode = false;
+        
+        // Chart Control Manager
+        class ChartControls {
+            constructor() {
+                this.initToolbar();
+                this.initTimeframeSelector();
+                this.initSymbolSelector();
+                this.initTradePanel();
+            }
+            
+            initToolbar() {
+                // Toolbar button event listeners
+                document.getElementById('cursorTool').addEventListener('click', () => this.setTool('cursor'));
+                document.getElementById('crosshairTool').addEventListener('click', () => this.setTool('crosshair'));
+                document.getElementById('trendlineTool').addEventListener('click', () => this.setTool('trendline'));
+                document.getElementById('horizontalTool').addEventListener('click', () => this.setTool('horizontal'));
+                document.getElementById('verticalTool').addEventListener('click', () => this.setTool('vertical'));
+                document.getElementById('rectangleTool').addEventListener('click', () => this.setTool('rectangle'));
+                document.getElementById('textTool').addEventListener('click', () => this.setTool('text'));
+                document.getElementById('clearTool').addEventListener('click', () => this.clearAll());
+            }
+            
+            initTimeframeSelector() {
+                const timeframeBtns = document.querySelectorAll('.timeframe-btn');
+                timeframeBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const timeframe = btn.dataset.timeframe;
+                        this.changeTimeframe(timeframe);
+                    });
+                });
+            }
+            
+            initSymbolSelector() {
+                const symbolSelector = document.getElementById('symbolSelector');
+                symbolSelector.addEventListener('change', (e) => {
+                    this.changeSymbol(e.target.value);
+                });
+            }
+            
+            initTradePanel() {
+                document.getElementById('buyBtn').addEventListener('click', () => this.executeTrade('buy'));
+                document.getElementById('sellBtn').addEventListener('click', () => this.executeTrade('sell'));
+            }
+            
+            setTool(tool) {
+                // Remove active class from all toolbar buttons
+                document.querySelectorAll('.toolbar-btn').forEach(btn => btn.classList.remove('active'));
+                
+                // Add active class to selected tool
+                document.getElementById(tool + 'Tool').classList.add('active');
+                
+                activeTool = tool;
+                drawingMode = tool !== 'cursor';
+                
+                // Update chart interaction mode
+                if (chart) {
+                    if (tool === 'crosshair') {
+                        chart.applyOptions({
+                            handleScroll: false,
+                            handleScale: false
+                        });
+                    } else {
+                        chart.applyOptions({
+                            handleScroll: true,
+                            handleScale: true
+                        });
+                    }
+                }
+                
+                console.log(`Tool changed to: ${tool}`);
+            }
+            
+            async changeTimeframe(timeframe) {
+                // Remove active class from all timeframe buttons
+                document.querySelectorAll('.timeframe-btn').forEach(btn => btn.classList.remove('active'));
+                
+                // Add active class to selected timeframe
+                document.querySelector(`[data-timeframe="${timeframe}"]`).classList.add('active');
+                
+                currentTimeframe = timeframe;
+                
+                // Reload chart data with new timeframe
+                await this.loadChartData();
+                
+                console.log(`Timeframe changed to: ${timeframe}`);
+            }
+            
+            async changeSymbol(symbol) {
+                currentSymbol = symbol;
+                
+                // Update symbol display in header
+                document.getElementById('symbolDisplay').textContent = symbol;
+                
+                // Reload chart data with new symbol
+                await this.loadChartData();
+                
+                console.log(`Symbol changed to: ${symbol}`);
+            }
+            
+            async loadChartData() {
+                try {
+                    document.getElementById('loading').style.display = 'block';
+                    document.getElementById('error').style.display = 'none';
+                    
+                    // Fetch candle data for current symbol and timeframe
+                    const response = await fetch(`/api/candles?symbol=${currentSymbol}&timeframe=${currentTimeframe}`);
+                    const candles = await response.json();
+                    
+                    if (candles.error) {
+                        throw new Error(candles.error);
+                    }
+                    
+                    // Update chart data
+                    if (candleSeries) {
+                        candleSeries.setData(candles);
+                    }
+                    
+                    // Update stats
+                    document.getElementById('totalBars').textContent = candles.length;
+                    
+                    document.getElementById('loading').style.display = 'none';
+                    dataReceived = true;
+                    
+                } catch (error) {
+                    console.error('Error loading chart data:', error);
+                    document.getElementById('error').textContent = `Error loading data: ${error.message}`;
+                    document.getElementById('error').style.display = 'block';
+                    document.getElementById('loading').style.display = 'none';
+                }
+            }
+            
+            clearAll() {
+                // Clear all drawings and annotations
+                if (chart) {
+                    // Remove all series except the main candlestick series
+                    orderBlockSeries.forEach(series => {
+                        chart.removeSeries(series);
+                    });
+                    orderBlockSeries = [];
+                }
+                
+                console.log('All drawings cleared');
+            }
+            
+            executeTrade(direction) {
+                const lotSize = document.getElementById('lotSize').value;
+                const stopLoss = document.getElementById('stopLoss').value;
+                const takeProfit = document.getElementById('takeProfit').value;
+                
+                const tradeData = {
+                    symbol: currentSymbol,
+                    direction: direction,
+                    lotSize: parseFloat(lotSize),
+                    stopLoss: parseInt(stopLoss),
+                    takeProfit: parseInt(takeProfit),
+                    timestamp: new Date().toISOString()
+                };
+                
+                console.log(`${direction.toUpperCase()} trade executed:`, tradeData);
+                
+                // Show trade confirmation
+                alert(`${direction.toUpperCase()} order placed for ${lotSize} lots of ${currentSymbol}\nSL: ${stopLoss} pips | TP: ${takeProfit} pips`);
+            }
+        }
+        
+        // AI Analysis Manager
+        class ChartAIAnalysis {
+            constructor() {
+                this.initEventListeners();
+            }
+            
+            initEventListeners() {
+                document.getElementById('aiAnalyzeBtn').addEventListener('click', () => {
+                    this.runFullAnalysis();
+                });
+                
+                document.getElementById('quickInsightsBtn').addEventListener('click', () => {
+                    this.runQuickInsights();
+                });
+            }
+            
+            async runFullAnalysis() {
+                if (isAnalyzing) return;
+                
+                this.setAnalyzing(true);
+                
+                try {
+                    const response = await fetch(`/api/ai-analysis?symbol=${currentSymbol}`);
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    
+                    this.displayAnalysisResults(data);
+                    
+                } catch (error) {
+                    this.showError(`AI Analysis failed: ${error.message}`);
+                } finally {
+                    this.setAnalyzing(false);
+                }
+            }
+            
+            async runQuickInsights() {
+                if (isAnalyzing) return;
+                
+                this.setAnalyzing(true);
+                
+                try {
+                    const response = await fetch(`/api/quick-insights?symbol=${currentSymbol}`);
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    
+                    this.displayQuickInsights(data);
+                    
+                } catch (error) {
+                    this.showError(`Quick Insights failed: ${error.message}`);
+                } finally {
+                    this.setAnalyzing(false);
+                }
+            }
+            
+            setAnalyzing(analyzing) {
+                isAnalyzing = analyzing;
+                const spinner = document.getElementById('aiSpinner');
+                const aiBtn = document.getElementById('aiAnalyzeBtn');
+                const quickBtn = document.getElementById('quickInsightsBtn');
+                
+                if (analyzing) {
+                    spinner.style.display = 'inline';
+                    aiBtn.disabled = true;
+                    quickBtn.disabled = true;
+                } else {
+                    spinner.style.display = 'none';
+                    aiBtn.disabled = false;
+                    quickBtn.disabled = false;
+                }
+            }
+            
+            displayAnalysisResults(data) {
+                // Create or update analysis overlay
+                this.removeExistingOverlay();
+                
+                const overlay = document.createElement('div');
+                overlay.id = 'aiAnalysisOverlay';
+                overlay.className = 'ai-analysis-overlay';
+                
+                overlay.innerHTML = `
+                    <div class="ai-analysis-panel">
+                        <div class="ai-analysis-header">
+                            <h3>AI Chart Analysis - ${currentSymbol}</h3>
+                            <button class="close-btn" onclick="document.getElementById('aiAnalysisOverlay').remove()">&times;</button>
+                        </div>
+                        <div class="ai-analysis-content">
+                            <div class="analysis-section">
+                                <h4>Trading Insights</h4>
+                                <p><strong>Trend:</strong> ${data.trend || 'N/A'}</p>
+                                <p><strong>Confidence:</strong> ${data.confidence || 'N/A'}%</p>
+                                <p><strong>Recommendation:</strong> ${data.recommendation || 'N/A'}</p>
+                            </div>
+                            <div class="analysis-section">
+                                <h4>Technical Indicators</h4>
+                                <p><strong>RSI:</strong> ${data.rsi || 'N/A'}</p>
+                                <p><strong>SMA 20:</strong> ${data.sma_20 || 'N/A'}</p>
+                                <p><strong>SMA 50:</strong> ${data.sma_50 || 'N/A'}</p>
+                            </div>
+                            <div class="analysis-section">
+                                <h4>Pattern Recognition</h4>
+                                <p><strong>Pattern:</strong> ${data.pattern || 'None detected'}</p>
+                                <p><strong>Support:</strong> ${data.support_level || 'N/A'}</p>
+                                <p><strong>Resistance:</strong> ${data.resistance_level || 'N/A'}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(overlay);
+            }
+            
+            displayQuickInsights(data) {
+                this.removeExistingOverlay();
+                
+                const overlay = document.createElement('div');
+                overlay.id = 'aiAnalysisOverlay';
+                overlay.className = 'ai-analysis-overlay';
+                
+                overlay.innerHTML = `
+                    <div class="ai-analysis-panel quick-insights">
+                        <div class="ai-analysis-header">
+                            <h3>Quick Insights - ${currentSymbol}</h3>
+                            <button class="close-btn" onclick="document.getElementById('aiAnalysisOverlay').remove()">&times;</button>
+                        </div>
+                        <div class="ai-analysis-content">
+                            <div class="insight-item">
+                                <strong>Signal:</strong> ${data.signal || 'NEUTRAL'}
+                            </div>
+                            <div class="insight-item">
+                                <strong>Strength:</strong> ${data.strength || 'Medium'}
+                            </div>
+                            <div class="insight-item">
+                                <strong>Entry:</strong> ${data.entry_point || 'Wait for confirmation'}
+                            </div>
+                            <div class="insight-item">
+                                <strong>Risk:</strong> ${data.risk_level || 'Medium'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(overlay);
+            }
+            
+            removeExistingOverlay() {
+                const existing = document.getElementById('aiAnalysisOverlay');
+                if (existing) {
+                    existing.remove();
+                }
+            }
+            
+            showError(message) {
+                this.removeExistingOverlay();
+                
+                const overlay = document.createElement('div');
+                overlay.id = 'aiAnalysisOverlay';
+                overlay.className = 'ai-analysis-overlay';
+                
+                overlay.innerHTML = `
+                    <div class="ai-analysis-panel error-panel">
+                        <div class="ai-analysis-header">
+                            <h3>AI Analysis Error</h3>
+                            <button class="close-btn" onclick="document.getElementById('aiAnalysisOverlay').remove()">&times;</button>
+                        </div>
+                        <div class="ai-analysis-content">
+                            <p class="error-message">${message}</p>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(overlay);
+            }
+        }
+        
+        // AI Analysis will be initialized in the main DOMContentLoaded event
+        let aiAnalysis = null;
+        
+        // Initialize chart controls
+        let chartControls = null;
+        
+        // Initialize chart and load data when DOM is ready
+        document.addEventListener('DOMContentLoaded', async () => {
+            initChart();
+            chartControls = new ChartControls();
+            aiAnalysis = new ChartAIAnalysis();
+            await chartControls.loadChartData();
+        });
+        
+        // Request data from parent window if opened from another window
+        if (window.opener) {
+            // If this window was opened by another window, request data
+            window.opener.postMessage({ type: 'REQUEST_CHART_DATA' }, '*');
+        }
+    </script>
+</body>
+</html>

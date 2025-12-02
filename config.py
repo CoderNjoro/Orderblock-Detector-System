@@ -1,0 +1,6 @@
+
+# config.py
+TWELVE_DATA_API_KEY = "e66f23af924748319c7aea637eb54fac"
+
+SYMBOLS = ["EUR/USD", "GBP/USD", "USD/JPY"]
+TIMEFRAME = "1h"

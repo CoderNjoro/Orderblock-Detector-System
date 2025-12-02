@@ -1,0 +1,1726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forex Order Blocks - TradingView Chart</title>
+    
+    <!-- Multiple CDN sources for reliability -->
+    <script>
+        // Function to load library from multiple sources
+        function loadLightweightCharts() {
+            const sources = [
+                'https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js',
+                'https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/lightweight-charts/4.1.3/lightweight-charts.standalone.production.js',
+                'https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js'
+            ];
+            
+            let currentSource = 0;
+            
+            function tryLoadScript() {
+                if (currentSource >= sources.length) {
+                    console.error('All CDN sources failed to load LightweightCharts');
+                    // Try fallback to Chart.js
+                    loadChartJSFallback();
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = sources[currentSource];
+                script.onload = function() {
+                    console.log('Script loaded from:', sources[currentSource]);
+                    document.getElementById('loading').textContent = 'Chart library loaded, checking compatibility...';
+                    
+                    // Wait a bit longer for the library to fully initialize
+                    setTimeout(() => {
+                        if (typeof LightweightCharts !== 'undefined') {
+                            console.log('LightweightCharts object found:', LightweightCharts);
+                            
+                            // Check if the library has the required methods
+                            if (typeof LightweightCharts.createChart === 'function') {
+                                console.log('createChart method available');
+                                document.getElementById('loading').textContent = 'Chart library loaded, initializing...';
+                                initChart();
+                            } else {
+                                console.error('createChart method not available');
+                                currentSource++;
+                                tryLoadScript();
+                            }
+                        } else {
+                            console.error('LightweightCharts not available after loading');
+                            currentSource++;
+                            tryLoadScript();
+                        }
+                    }, 200);
+                };
+                script.onerror = function() {
+                    console.warn('Failed to load from:', sources[currentSource]);
+                    currentSource++;
+                    tryLoadScript();
+                };
+                
+                document.head.appendChild(script);
+            }
+            
+            tryLoadScript();
+        }
+        
+        // Fallback to Chart.js if LightweightCharts fails
+        function loadChartJSFallback() {
+            console.log('Loading Chart.js as fallback...');
+            document.getElementById('loading').textContent = 'Loading fallback chart library...';
+            
+            // Load Chart.js and required plugins
+            const scripts = [
+                'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js',
+                'https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.0/dist/chartjs-adapter-moment.min.js',
+                'https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.0.2/dist/chartjs-plugin-annotation.min.js',
+                'https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js',
+                'https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.0/dist/chartjs-chart-financial.min.js'
+            ];
+            
+            let loadedScripts = 0;
+            
+            scripts.forEach((src, index) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = function() {
+                    loadedScripts++;
+                    console.log(`Loaded script ${index + 1}/${scripts.length}:`, src);
+                    
+                    if (loadedScripts === scripts.length) {
+                        console.log('All Chart.js plugins loaded');
+                        document.getElementById('loading').textContent = 'Fallback chart library loaded, initializing...';
+                        setTimeout(() => {
+                            if (typeof Chart !== 'undefined') {
+                                // Register plugins
+                                if (window['chartjs-plugin-annotation']) {
+                                    Chart.register(window['chartjs-plugin-annotation']);
+                                }
+                                if (window['chartjs-plugin-zoom']) {
+                                    Chart.register(window['chartjs-plugin-zoom']);
+                                }
+                                // chartjs-chart-financial automatically registers the candlestick chart type
+                                
+                                initFallbackChart();
+                            } else {
+                                showError('Failed to load Chart.js library. Please check your internet connection.');
+                            }
+                        }, 100);
+                    }
+                };
+                script.onerror = function() {
+                    console.error('Failed to load script:', src);
+                    loadedScripts++;
+                    if (loadedScripts === scripts.length) {
+                        showError('Failed to load Chart.js plugins. Please check your internet connection and refresh the page.');
+                    }
+                };
+                
+                document.head.appendChild(script);
+            });
+        }
+    </script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            color: #131722;
+            overflow: hidden;
+        }
+        
+        /* Optimized rendering for chart container and elements */
+        #chart, #chart canvas, .tv-lightweight-charts, .tv-lightweight-charts canvas {
+            box-shadow: none !important;
+            filter: none !important;
+            background: none !important;
+            /* Prevent rendering artifacts and shadows during navigation */
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            will-change: transform;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            /* Force GPU acceleration and isolate compositing */
+            isolation: isolate;
+            contain: strict;
+            /* Disable shadow casting */
+            -webkit-box-shadow: none;
+            -moz-box-shadow: none;
+            /* Optimize for minimal repaints */
+            image-rendering: crisp-edges;
+            shape-rendering: crispEdges;
+        }
+
+        /* Additional optimization for order block elements */
+        .tv-lightweight-charts .series-markers,
+        .tv-lightweight-charts .series-area,
+        .tv-lightweight-charts .series-line {
+            /* Disable all shadow effects */
+            filter: none !important;
+            drop-shadow: none !important;
+            /* Force flat rendering */
+            transform-style: flat;
+            -webkit-transform-style: flat;
+            /* Optimize compositing */
+            mix-blend-mode: normal;
+            opacity: 1;
+        }
+        
+        /* Optimize chart series rendering to prevent shadows */
+        .tv-lightweight-charts svg,
+        .tv-lightweight-charts canvas {
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            shape-rendering: crispEdges;
+        }
+        
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: #ffffff;
+            border-bottom: 1px solid #e1e3e6;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #131722;
+        }
+        
+        .header .symbol {
+            margin-left: 20px;
+            font-size: 14px;
+            color: #787b86;
+        }
+        
+        .header .controls {
+            margin-left: 20px;
+            display: flex;
+            gap: 5px;
+        }
+        
+        .control-btn {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #e1e3e6;
+            background: #ffffff;
+            color: #131722;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        
+        .control-btn:hover {
+            background: #f8f9fa;
+            border-color: #2962FF;
+            color: #2962FF;
+        }
+        
+        .control-btn:active {
+            background: #e3f2fd;
+            transform: scale(0.95);
+        }
+        
+        .header .stats {
+            margin-left: auto;
+            display: flex;
+            gap: 20px;
+            font-size: 12px;
+        }
+        
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .stat-value {
+            font-weight: 600;
+            color: #131722;
+        }
+        
+        .stat-label {
+            color: #787b86;
+            font-size: 10px;
+        }
+        
+        #chart {
+            position: fixed;
+            top: 50px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100vw;
+            height: calc(100vh - 50px);
+        }
+        
+        .legend {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #e1e3e6;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+            margin-right: 8px;
+        }
+        
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 16px;
+            color: #787b86;
+            text-align: center;
+        }
+        
+        .error {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #ef5350;
+            max-width: 400px;
+            padding: 20px;
+            background: rgba(239, 83, 80, 0.1);
+            border: 1px solid #ef5350;
+            border-radius: 8px;
+        }
+        
+        .retry-btn {
+            margin-top: 15px;
+            padding: 8px 16px;
+            background: #2962FF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .retry-btn:hover {
+            background: #1e4bd8;
+        }
+        
+        /* Trade Execution Panel Styles */
+        .trade-panel {
+            position: fixed;
+            top: 70px;
+            left: 20px;
+            width: 300px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #e1e3e6;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1000;
+            font-size: 12px;
+        }
+        
+        .trade-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid #e1e3e6;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .trade-panel-header h3 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #131722;
+        }
+        
+        .toggle-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            color: #787b86;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .toggle-btn:hover {
+            color: #131722;
+        }
+        
+        .trade-panel-content {
+            padding: 15px;
+        }
+        
+        .trade-stats {
+            margin-bottom: 15px;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .stat-item .stat-label {
+            color: #787b86;
+            font-size: 11px;
+        }
+        
+        .stat-item .stat-value {
+            color: #131722;
+            font-weight: 600;
+            font-size: 11px;
+        }
+        
+        .trade-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .trade-item {
+            padding: 8px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 3px solid;
+        }
+        
+        .trade-item.bullish {
+            border-left-color: #00ff88;
+        }
+        
+        .trade-item.bearish {
+            border-left-color: #ff4757;
+        }
+        
+        .trade-type {
+            font-weight: 600;
+            font-size: 11px;
+        }
+        
+        .trade-type.buy {
+            color: #00ff88;
+        }
+        
+        .trade-type.sell {
+            color: #ff4757;
+        }
+        
+        .trade-price {
+            font-size: 11px;
+            color: #131722;
+            margin-top: 2px;
+        }
+        
+        .trade-time {
+            font-size: 10px;
+            color: #787b86;
+            margin-top: 2px;
+        }
+        
+        .no-trades {
+            text-align: center;
+            color: #787b86;
+            font-style: italic;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Forex Order Block Analyzer</h1>
+        <div class="symbol" id="symbolDisplay">Loading...</div>
+        <div class="controls">
+            <button id="zoomInBtn" class="control-btn" title="Zoom In">+</button>
+            <button id="zoomOutBtn" class="control-btn" title="Zoom Out">−</button>
+            <button id="resetZoomBtn" class="control-btn" title="Reset Zoom">↺</button>
+            <button id="toggleLiquiditySwingsBtn" class="control-btn" title="Toggle Liquidity Swings" aria-pressed="true" style="background: #e3f2fd; border-color: #2962FF; color: #2962FF;">💧</button>
+        </div>
+        
+        <!-- AI Analysis Controls -->
+        <div class="ai-controls">
+            <button id="aiAnalyzeBtn" class="ai-btn ai-btn-primary">
+                <span class="ai-btn-icon">[AI]</span>
+                <span class="ai-btn-text">AI Analysis</span>
+                <span id="aiSpinner" class="ai-spinner" style="display: none;">[...]</span>
+            </button>
+            <button id="quickInsightsBtn" class="ai-btn ai-btn-secondary">
+                <span class="ai-btn-icon">[!]</span>
+                <span class="ai-btn-text">Quick Insights</span>
+            </button>
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="totalBars">0</div>
+                <div class="stat-label">Bars</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="bullishBlocks">0</div>
+                <div class="stat-label">Bullish OB</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="bearishBlocks">0</div>
+                <div class="stat-label">Bearish OB</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="freshBlocks">0</div>
+                <div class="stat-label">Fresh</div>
+        </div>
+        
+        <div id="chart"></div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(0,255,136,0.3);"></div>
+                <span>Bullish Order Block</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(255,71,87,0.3);"></div>
+                <span>Bearish Order Block</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffd700;"></div>
+                <span>CHOCH Event</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffa502;"></div>
+                <span>BOS Event</span>
+            </div>
+        </div>
+        
+        <!-- Trade Execution Panel -->
+        <div class="trade-panel" id="tradePanel">
+            <div class="trade-panel-header">
+                <h3>Trade Execution</h3>
+                <button class="toggle-btn" onclick="toggleTradePanel()">−</button>
+            </div>
+            <div class="trade-panel-content" id="tradePanelContent">
+                <div class="trade-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Pending Trades:</span>
+                        <span class="stat-value" id="pendingTradesCount">0</span>
+                    </div>
+                </div>
+                <div class="trade-list" id="tradeList">
+                    <p class="no-trades">No pending trades</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">Loading chart library...</div>
+        <div class="error" id="error" style="display: none;">
+            <div>Failed to load chart library</div>
+            <button class="retry-btn" onclick="retryLoad()">Retry Loading</button>
+        </div>
+<div class="legend-item">
+    <div class="legend-color" style="background: transparent; border: 2px dashed #009688;"></div>
+    <span>Liquidity Swing Low</span>
+</div>
+    </div>
+    
+    <div class="loading" id="loading">Loading chart library...</div>
+    <div class="error" id="error" style="display: none;">
+        <div>Failed to load chart library</div>
+        <button class="retry-btn" onclick="retryLoad()">Retry Loading</button>
+    </div>
+
+    <script>
+        let chart = null;
+        let candleSeries = null;
+        let orderBlockSeries = [];
+        let dataReceived = false;
+        let pendingData = null;
+        let chartInitialized = false;
+
+        // Liquidity swings toggle state
+        let liquiditySwingsVisible = true;
+        let liquiditySwingsSeries = [];
+
+        // Retry loading function
+        function retryLoad() {
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('loading').textContent = 'Retrying to load chart library...';
+            loadLightweightCharts();
+        }
+
+        // Fallback Chart.js implementation
+        function initFallbackChart() {
+            try {
+                const chartContainer = document.getElementById('chart');
+                if (!chartContainer) {
+                    throw new Error('Chart container not found');
+                }
+
+                // Create canvas for Chart.js
+                const canvas = document.createElement('canvas');
+                canvas.id = 'fallbackChart';
+                canvas.style.width = '100%';
+                canvas.style.height = '100%';
+                chartContainer.appendChild(canvas);
+
+                const ctx = canvas.getContext('2d');
+
+                // Create the same candlestick chart as in index.html
+                chart = new Chart(ctx, {
+                    type: 'candlestick',
+                    data: {
+                        datasets: [{
+                            label: 'Candlestick Chart',
+                            data: [],
+                            borderColor: '#555',
+                            borderWidth: 1,
+                            color: {
+                                up: '#00ff88', // Bullish candles
+                                down: '#ff4757', // Bearish candles
+                                unchanged: '#787b86'
+                            }
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: { color: '#131722' }
+                            },
+                            tooltip: {
+                                enabled: true,
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        const { o, h, l, c } = context.raw;
+                                        return [
+                                            `Open: ${o.toFixed(5)}`,
+                                            `High: ${h.toFixed(5)}`,
+                                            `Low: ${l.toFixed(5)}`,
+                                            `Close: ${c.toFixed(5)}`
+                                        ];
+                                    }
+                                }
+                            },
+                            annotation: {
+                                annotations: {}
+                            },
+                            decimation: {
+                                enabled: true,
+                                algorithm: 'lttb',
+                                samples: 1000
+                            },
+                            zoom: {
+                                zoom: {
+                                    wheel: {
+                                        enabled: true,
+                                        modifierKey: null,
+                                    },
+                                    drag: {
+                                        enabled: true,
+                                        modifierKey: null
+                                    },
+                                    pinch: { enabled: true },
+                                    mode: 'xy',
+                                },
+                                pan: {
+                                    enabled: true,
+                                    mode: 'xy',
+                                    modifierKey: null
+                                },
+                                limits: {
+                                    x: { minRange: 5 },
+                                    y: { minRange: 0.0001 }
+                                }
+                            }
+                        },
+                        layout: {
+                            backgroundColor: '#ffffff'
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'hour',
+                                    displayFormats: {
+                                        minute: 'HH:mm',
+                                        hour: 'HH:mm',
+                                        day: 'MMM D',
+                                        week: 'MMM D'
+                                    }
+                                },
+                                ticks: { color: '#888' },
+                                grid: { color: 'rgba(0,0,0,0.06)' }
+                            },
+                            y: {
+                                beginAtZero: false,
+                                position: 'right',
+                                ticks: { color: '#888' },
+                                grid: { color: 'rgba(0,0,0,0.06)' }
+                            }
+                        }
+                    }
+                });
+
+                chartInitialized = true;
+                console.log('Fallback Chart.js candlestick chart initialized successfully');
+
+                // Process any pending data
+                if (pendingData) {
+                    console.log('Processing pending data with fallback chart');
+                    processFallbackData(pendingData.candles, pendingData.orderBlocks, pendingData.symbol);
+                    pendingData = null;
+                }
+
+            } catch (error) {
+                console.error('Error initializing fallback chart:', error);
+                showError('Error initializing fallback chart: ' + error.message);
+            }
+        }
+
+        // Process data for fallback chart
+        function processFallbackData(candles, orderBlocks, symbol) {
+            try {
+                console.log('Processing data with fallback chart:', { candles: candles?.length, orderBlocks: orderBlocks?.length, symbol });
+
+                if (!chartInitialized || !chart) {
+                    console.log('Fallback chart not ready, storing data for later processing');
+                    pendingData = { candles, orderBlocks, symbol };
+                    return;
+                }
+
+                // Hide loading
+                document.getElementById('loading').style.display = 'none';
+
+                // Update symbol display
+                document.getElementById('symbolDisplay').textContent = symbol || 'Forex Pair';
+
+                // Store candles globally for reference
+                window.candles = candles;
+
+                // Convert candles to Chart.js candlestick format (same as index.html)
+                if (candles && candles.length > 0) {
+                    const candlestickData = candles.map(c => ({
+                        x: new Date(c.time * 1000),
+                        o: c.open,
+                        h: c.high,
+                        l: c.low,
+                        c: c.close
+                    }));
+
+                    chart.data.datasets[0].data = candlestickData;
+
+                    // Clear existing annotations before adding new ones
+                    chart.options.plugins.annotation.annotations = {};
+                    chart.update();
+
+                    console.log(`Set ${candles.length} candlesticks in fallback chart`);
+
+                    // Add order block annotations if available
+                    if (orderBlocks && orderBlocks.length > 0) {
+                        addOrderBlockAnnotations(orderBlocks);
+                    }
+                }
+
+                // Update statistics
+                updateStats(candles, orderBlocks);
+
+                dataReceived = true;
+                console.log('Fallback data processed successfully');
+
+            } catch (error) {
+                console.error('Error processing fallback data:', error);
+                showError('Error processing fallback data: ' + error.message);
+            }
+        }
+
+        // Add order block annotations to Chart.js
+        function addOrderBlockAnnotations(orderBlocks) {
+            if (!chart || !orderBlocks || orderBlocks.length === 0) return;
+
+            const annotations = {};
+
+            orderBlocks.forEach((ob, index) => {
+                const time = new Date(ob.time);
+                const color = ob.type === 'bullish' ? 'rgba(0, 255, 136, 0.15)' : 'rgba(255, 71, 87, 0.15)';
+                const borderColor = ob.type === 'bullish' ? '#00ff88' : '#ff4757';
+
+                // Find mitigation point using the same logic
+                const obTime = Math.floor(new Date(ob.time).getTime() / 1000);
+                const mitigationTime = findMitigationPoint(ob, obTime);
+                const endTime = new Date(mitigationTime * 1000);
+
+                // Order Block Box - clean rectangle
+                annotations[`ob${index}`] = {
+                    type: 'box',
+                    xMin: time,
+                    xMax: endTime,
+                    yMin: parseFloat(ob.low),
+                    yMax: parseFloat(ob.high),
+                    backgroundColor: color,
+                    borderColor: borderColor,
+                    borderWidth: 1,
+                    label: {
+                        content: `${ob.type.charAt(0).toUpperCase() + ob.type.slice(1)} OB (${ob.strength || 'Medium'})`,
+                        display: true,
+                        position: 'center',
+                        color: borderColor,
+                        font: { size: 11, weight: 'bold' },
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        padding: 4
+                    }
+                };
+
+                // Add trigger event marker if available
+                if (ob.triggerEvent && ob.triggerTime) {
+                    const triggerTime = new Date(ob.triggerTime);
+                    const triggerColor = ob.triggerEvent === 'CHOCH' ? '#ffd700' : '#ffa502';
+                    const triggerLabel = ob.triggerEvent === 'CHOCH' ? 'CHOCH' : 'BOS';
+
+                    annotations[`trigger${index}`] = {
+                        type: 'line',
+                        xMin: triggerTime,
+                        xMax: triggerTime,
+                        yMin: parseFloat(ob.low) - (parseFloat(ob.high) - parseFloat(ob.low)) * 0.1,
+                        yMax: parseFloat(ob.high) + (parseFloat(ob.high) - parseFloat(ob.low)) * 0.1,
+                        borderColor: triggerColor,
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        label: {
+                            content: triggerLabel,
+                            display: true,
+                            position: 'end',
+                            color: triggerColor,
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            font: { size: 10, weight: 'bold' },
+                            padding: 2
+                        }
+                    };
+
+                    // Connection line from OB to trigger event
+                    annotations[`connection${index}`] = {
+                        type: 'line',
+                        xMin: time,
+                        xMax: triggerTime,
+                        yMin: (parseFloat(ob.high) + parseFloat(ob.low)) / 2,
+                        yMax: parseFloat(ob.triggerPrice || (parseFloat(ob.high) + parseFloat(ob.low)) / 2),
+                        borderColor: triggerColor,
+                        borderWidth: 1,
+                        borderDash: [3, 3]
+                    };
+                }
+            });
+
+            chart.options.plugins.annotation.annotations = annotations;
+            chart.update();
+        }
+
+        // Check if LightweightCharts is available
+        function checkLibrary() {
+            if (typeof LightweightCharts === 'undefined') {
+                throw new Error('LightweightCharts library not loaded. Please check your internet connection.');
+            }
+            return true;
+        }
+
+        // Initialize chart
+        function initChart() {
+            // Add timeout to prevent hanging
+            const initTimeout = setTimeout(() => {
+                console.error('Chart initialization timed out, trying fallback...');
+                loadChartJSFallback();
+            }, 10000); // 10 second timeout
+
+            try {
+                console.log('Starting chart initialization...');
+                checkLibrary();
+
+                const chartContainer = document.getElementById('chart');
+                if (!chartContainer) {
+                    throw new Error('Chart container not found');
+                }
+
+                console.log('Chart container found, creating chart...');
+
+                // Use clean configuration for better compatibility
+                chart = LightweightCharts.createChart(chartContainer, {
+                    width: window.innerWidth,
+                    height: window.innerHeight - 50,
+                    layout: {
+                        background: { color: '#ffffff' },
+                        textColor: '#131722',
+                    },
+                    grid: {
+                        vertLines: { color: 'rgba(0,0,0,0.06)' },
+                        horzLines: { color: 'rgba(0,0,0,0.06)' },
+                    },
+                    crosshair: {
+                        mode: LightweightCharts.CrosshairMode.Normal,
+                        vertLine: {
+                            color: 'rgba(55,66,250,0.2)',
+                            width: 1,
+                            style: 0,
+                        },
+                        horzLine: {
+                            color: 'rgba(55,66,250,0.2)',
+                            width: 1,
+                            style: 0,
+                        },
+                    },
+                    rightPriceScale: {
+                        borderColor: '#e1e3e6',
+                        scaleMargins: {
+                            top: 0.1,
+                            bottom: 0.1,
+                        },
+                    },
+                    timeScale: {
+                        borderColor: '#e1e3e6',
+                        timeVisible: true,
+                        secondsVisible: false,
+                        rightOffset: 5,
+                        barSpacing: 6,
+                    },
+                    handleScroll: {
+                        mouseWheel: true,
+                        pressedMouseMove: true,
+                        horzTouchDrag: true,
+                        vertTouchDrag: true,
+                    },
+                    handleScale: {
+                        axisPressedMouseMove: true,
+                        mouseWheel: true,
+                        pinch: true,
+                    },
+                });
+
+                console.log('Chart created, checking for series methods...');
+
+                // Check what methods are available
+                const chartMethods = Object.getOwnPropertyNames(chart);
+                console.log('Available chart methods:', chartMethods);
+
+                // Try to add candlestick series first
+                if (typeof chart.addCandlestickSeries === 'function') {
+                    console.log('Adding candlestick series...');
+                    candleSeries = chart.addCandlestickSeries({
+                        upColor: '#00ff88',
+                        downColor: '#ff4757',
+                        borderDownColor: '#ff4757',
+                        borderUpColor: '#00ff88',
+                        wickDownColor: '#ff4757',
+                        wickUpColor: '#00ff88',
+                        priceFormat: {
+                            type: 'price',
+                            precision: 5,
+                            minMove: 0.00001,
+                        },
+                    });
+                    console.log('Candlestick series added successfully');
+                } else if (typeof chart.addLineSeries === 'function') {
+                    console.log('Candlestick series not available, using line series as fallback...');
+                    candleSeries = chart.addLineSeries({
+                        color: '#2962FF',
+                        lineWidth: 2,
+                        priceFormat: {
+                            type: 'price',
+                            precision: 5,
+                            minMove: 0.00001,
+                        },
+                    });
+                    console.log('Line series added as fallback');
+                } else {
+                    console.error('No series method available');
+                    throw new Error('No series method available');
+                }
+
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    if (chart) {
+                        chart.resize(window.innerWidth, window.innerHeight - 50);
+                    }
+                });
+
+                chartInitialized = true;
+                console.log('Chart initialization completed successfully');
+
+                // Clear timeout since initialization succeeded
+                clearTimeout(initTimeout);
+
+                // Process any pending data
+                if (pendingData) {
+                    console.log('Processing pending data after chart initialization');
+                    processData(pendingData.candles, pendingData.orderBlocks, pendingData.symbol);
+                    pendingData = null;
+                }
+
+            } catch (error) {
+                console.error('Error initializing chart:', error);
+                console.error('Error details:', {
+                    message: error.message,
+                    stack: error.stack,
+                    chart: chart,
+                    LightweightCharts: typeof LightweightCharts
+                });
+
+                // Clear timeout since we're handling the error
+                clearTimeout(initTimeout);
+
+                // If LightweightCharts fails, try fallback immediately
+                console.log('LightweightCharts failed, trying fallback Chart.js...');
+                loadChartJSFallback();
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').innerHTML = `
+                <div>${message}</div>
+                <button class="retry-btn" onclick="retryLoad()">Retry Loading</button>
+            `;
+        }
+
+        // Trade execution logic for order blocks
+        function addTradeExecutionLogic(ob, obTime, high, low, borderColor) {
+            // Only generate trading signals for fresh (unmitigated) order blocks
+            if (!ob.fresh || ob.mitigated === true) {
+                console.log('Skipping trade signal for non-fresh order block:', ob.type, 'at', new Date(obTime * 1000).toISOString());
+                return;
+            }
+            
+            // Find the corresponding candle data to get the opening price
+            const candleData = window.candles;
+            if (!candleData || candleData.length === 0) {
+                console.warn('No candle data available for trade execution');
+                return;
+            }
+            
+            // Find the candle that corresponds to this order block time
+            const orderBlockCandle = candleData.find(candle => {
+                const candleTime = Math.floor(new Date(candle.time * 1000).getTime() / 1000);
+                return Math.abs(candleTime - obTime) < 3600; // Within 1 hour tolerance
+            });
+            
+            if (!orderBlockCandle) {
+                console.warn('Could not find corresponding candle for order block');
+                return;
+            }
+            
+            const entryPrice = orderBlockCandle.open;
+            const tradeType = ob.type === 'bullish' ? 'BUY' : 'SELL';
+            
+            // Validate entry price
+            if (!isFinite(entryPrice) || entryPrice <= 0) {
+                console.warn('Invalid entry price for trade execution:', entryPrice);
+                return;
+            }
+            
+            try {
+                // Add entry point marker on the chart
+                const entryMarker = chart.addLineSeries({
+                    color: ob.type === 'bullish' ? '#00ff88' : '#ff4757',
+                    lineWidth: 2,
+                    lineStyle: 2, // Dotted line
+                    priceLineVisible: false,
+                    lastValueVisible: false,
+                    crosshairMarkerVisible: false,
+                    autoscaleInfoProvider: () => null
+                });
+                
+                // Draw horizontal line at entry price across the order block
+                entryMarker.setData([
+                    { time: obTime, value: entryPrice },
+                    { time: obTime + 3600, value: entryPrice } // Extend 1 hour
+                ]);
+                
+                // Store the entry marker for cleanup
+                orderBlockSeries.push(entryMarker);
+                
+                // Add price marker for entry point
+                const priceMarker = chart.addLineSeries({
+                    color: '#ffffff',
+                    lineWidth: 0,
+                    priceLineVisible: true,
+                    lastValueVisible: true,
+                    crosshairMarkerVisible: true,
+                    title: `${tradeType} @ ${entryPrice.toFixed(5)}`,
+                    priceLineColor: borderColor,
+                    priceLineWidth: 1,
+                    priceLineStyle: 2
+                });
+                
+                priceMarker.setData([
+                    { time: obTime, value: entryPrice }
+                ]);
+                
+                orderBlockSeries.push(priceMarker);
+            } catch (error) {
+                console.error('Error creating trade execution markers:', error);
+                return;
+            }
+            
+            // Log trade execution details
+            console.log(`Trade Execution Setup:`, {
+                type: tradeType,
+                entryPrice: entryPrice,
+                orderBlockType: ob.type,
+                fresh: ob.fresh || false,
+                mitigated: ob.mitigated || false,
+                time: new Date(obTime * 1000).toISOString(),
+                high: high,
+                low: low
+            });
+            
+            // Store trade data for potential execution
+            if (!window.pendingTrades) {
+                window.pendingTrades = [];
+            }
+            
+            window.pendingTrades.push({
+                id: `trade_${obTime}_${ob.type}`,
+                type: tradeType,
+                entryPrice: entryPrice,
+                orderBlockType: ob.type,
+                fresh: ob.fresh || false,
+                mitigated: ob.mitigated || false,
+                timestamp: obTime,
+                high: high,
+                low: low,
+                status: 'pending'
+            });
+            
+            // Update the trade panel display
+            updateTradePanel();
+        }
+        
+        // Toggle trade panel visibility
+        function toggleTradePanel() {
+            const content = document.getElementById('tradePanelContent');
+            const toggleBtn = document.querySelector('.toggle-btn');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggleBtn.textContent = '−';
+            } else {
+                content.style.display = 'none';
+                toggleBtn.textContent = '+';
+            }
+        }
+        
+        // Update trade panel with current pending trades
+        function updateTradePanel() {
+            const pendingTrades = window.pendingTrades || [];
+            const countElement = document.getElementById('pendingTradesCount');
+            const listElement = document.getElementById('tradeList');
+            
+            // Update count
+            countElement.textContent = pendingTrades.length;
+            
+            // Update trade list
+            if (pendingTrades.length === 0) {
+                listElement.innerHTML = '<p class="no-trades">No pending trades</p>';
+            } else {
+                listElement.innerHTML = pendingTrades.map(trade => {
+                    const date = new Date(trade.timestamp * 1000);
+                    const timeStr = date.toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: false 
+                    });
+                    
+                    return `
+                        <div class="trade-item ${trade.orderBlockType}">
+                            <div class="trade-type ${trade.type.toLowerCase()}">${trade.type}</div>
+                            <div class="trade-price">Entry: ${trade.entryPrice.toFixed(5)}</div>
+                            <div class="trade-time">${timeStr}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+        
+        // Add order block zones
+        function addOrderBlockZones(orderBlocks) {
+            if (!chart || !orderBlocks || orderBlocks.length === 0) return;
+
+            // Clear any existing order block series
+            orderBlockSeries.forEach(series => {
+                if (series && typeof series.remove === 'function') {
+                    try {
+                        series.remove();
+                    } catch (error) {
+                        console.warn('Error removing series:', error);
+                    }
+                }
+            });
+            orderBlockSeries = [];
+
+            orderBlocks.forEach((ob, index) => {
+                const obTime = Math.floor(new Date(ob.time).getTime() / 1000);
+                // Find mitigation point
+                let xMax = findMitigationPoint(ob, obTime);
+                // Colors
+                const borderColor = ob.type === 'bullish' ? '#00ff88' : '#ff4757';
+                
+                const high = parseFloat(ob.high);
+                const low = parseFloat(ob.low);
+                
+                // Validate data before creating series
+                if (!isFinite(high) || !isFinite(low) || !isFinite(obTime) || !isFinite(xMax)) {
+                    console.warn('Invalid order block data, skipping:', { high, low, obTime, xMax });
+                    return;
+                }
+                
+                if (high <= low) {
+                    console.warn('Invalid order block: high must be greater than low', { high, low });
+                    return;
+                }
+                
+                // Add a subtle colored fill that won't cast shadows
+                const fillColor = ob.type === 'bullish' ? 'rgba(0,255,136,0.08)' : 'rgba(255,71,87,0.08)';
+                
+                try {
+                    const fillSeries = chart.addAreaSeries({
+                        topColor: fillColor,
+                        bottomColor: fillColor,
+                        lineColor: 'transparent',
+                        lineWidth: 0,
+                        priceLineVisible: false,
+                        lastValueVisible: false,
+                        crosshairMarkerVisible: false,
+                        lastPriceAnimation: 0,
+                        // Prevent shadow casting with optimized settings
+                        autoscaleInfoProvider: () => null,
+                        visible: true
+                    });
+                    
+                    // Create validated fill data
+                    const fillData = [
+                        { time: obTime, value: high },
+                        { time: xMax, value: high },
+                        { time: xMax, value: low },
+                        { time: obTime, value: low }
+                    ];
+                    
+                    // Validate each data point
+                    const validData = fillData.filter(point => 
+                        isFinite(point.time) && isFinite(point.value) && 
+                        point.time > 0 && point.value > 0
+                    );
+                    
+                    if (validData.length === fillData.length) {
+                        fillSeries.setData(validData);
+                    } else {
+                        console.warn('Some fill data points were invalid, removing series');
+                        fillSeries.remove();
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error creating fill series:', error);
+                    return;
+                }
+                
+                // Add clean borders for definition with validation
+                try {
+                    // Top border
+                    const topBorder = chart.addLineSeries({
+                        color: borderColor,
+                        lineWidth: 1,
+                        priceLineVisible: false,
+                        lastValueVisible: false,
+                        crosshairMarkerVisible: false,
+                        autoscaleInfoProvider: () => null
+                    });
+                    topBorder.setData([
+                        { time: obTime, value: high },
+                        { time: xMax, value: high }
+                    ]);
+                    
+                    // Bottom border
+                    const bottomBorder = chart.addLineSeries({
+                        color: borderColor,
+                        lineWidth: 1,
+                        priceLineVisible: false,
+                        lastValueVisible: false,
+                        crosshairMarkerVisible: false,
+                        autoscaleInfoProvider: () => null
+                    });
+                    bottomBorder.setData([
+                        { time: obTime, value: low },
+                        { time: xMax, value: low }
+                    ]);
+                    
+                    // Left border
+                    const leftBorder = chart.addLineSeries({
+                        color: borderColor,
+                        lineWidth: 1,
+                        priceLineVisible: false,
+                        lastValueVisible: false,
+                        crosshairMarkerVisible: false,
+                        autoscaleInfoProvider: () => null
+                    });
+                    leftBorder.setData([
+                        { time: obTime, value: low },
+                        { time: obTime, value: high }
+                    ]);
+                    
+                    // Right border
+                    const rightBorder = chart.addLineSeries({
+                        color: borderColor,
+                        lineWidth: 1,
+                        priceLineVisible: false,
+                        lastValueVisible: false,
+                        crosshairMarkerVisible: false,
+                        autoscaleInfoProvider: () => null
+                    });
+                    rightBorder.setData([
+                        { time: xMax, value: low },
+                        { time: xMax, value: high }
+                    ]);
+                    
+                    // Store series for later removal
+                    orderBlockSeries.push(fillSeries, topBorder, bottomBorder, leftBorder, rightBorder);
+                } catch (error) {
+                    console.error('Error creating border series:', error);
+                    return;
+                }
+                
+                // Add trade execution logic
+                addTradeExecutionLogic(ob, obTime, high, low, borderColor);
+                
+                // Add trigger event markers if available (simplified to reduce shadows)
+                if (ob.triggerEvent && ob.triggerTime) {
+                    const triggerTime = Math.floor(new Date(ob.triggerTime).getTime() / 1000);
+                    const triggerColor = ob.triggerEvent === 'CHOCH' ? '#ffd700' : '#ffa502';
+                    
+                    // Single trigger line instead of multiple overlapping elements
+                    const triggerLine = chart.addLineSeries({
+                        color: triggerColor,
+                        lineWidth: 1,
+                        lineStyle: 1, // Dashed
+                        priceLineVisible: false,
+                        lastValueVisible: false,
+                        crosshairMarkerVisible: false,
+                        autoscaleInfoProvider: () => null
+                    });
+                    
+                    triggerLine.setData([
+                        { time: triggerTime, value: low - (high - low) * 0.05 },
+                        { time: triggerTime, value: high + (high - low) * 0.05 }
+                    ]);
+                    
+                    orderBlockSeries.push(triggerLine);
+                }
+            });
+        }
+
+        // Find mitigation point for an order block
+        function findMitigationPoint(ob, obTime) {
+            if (!window.candles || window.candles.length === 0) {
+                return obTime + 86400 * 30; // Default 30 days if no data
+            }
+
+            const obIndex = window.candles.findIndex(c => c.time >= obTime);
+            if (obIndex === -1) {
+                return window.candles[window.candles.length - 1].time;
+            }
+
+            const high = parseFloat(ob.high);
+            const low = parseFloat(ob.low);
+
+            // Check for mitigation after the order block
+            for (let i = obIndex + 1; i < window.candles.length; i++) {
+                const candle = window.candles[i];
+                const candleLow = parseFloat(candle.low);
+                const candleHigh = parseFloat(candle.high);
+
+                if (ob.type === 'bullish') {
+                    // Bullish OB is mitigated when price goes below the low
+                    if (candleLow < low) {
+                        return candle.time;
+                    }
+                } else {
+                    // Bearish OB is mitigated when price goes above the high
+                    if (candleHigh > high) {
+                        return candle.time;
+                    }
+                }
+            }
+
+            // If no mitigation found, extend to the end of the data
+            return window.candles[window.candles.length - 1].time;
+        }
+
+        // Update statistics
+        function updateStats(candles, orderBlocks) {
+            try {
+                document.getElementById('totalBars').textContent = candles ? candles.length : 0;
+                document.getElementById('bullishBlocks').textContent = orderBlocks ? orderBlocks.filter(ob => ob.type === 'bullish').length : 0;
+                document.getElementById('bearishBlocks').textContent = orderBlocks ? orderBlocks.filter(ob => ob.type === 'bearish').length : 0;
+                document.getElementById('freshBlocks').textContent = orderBlocks ? orderBlocks.filter(ob => ob.fresh).length : 0;
+            } catch (error) {
+                console.error('Error updating stats:', error);
+            }
+        }
+
+        // Clear existing order blocks
+        function clearOrderBlocks() {
+            if (orderBlockSeries && orderBlockSeries.length > 0) {
+                orderBlockSeries.forEach(series => {
+                    if (series && typeof series.remove === 'function') {
+                        try {
+                            series.remove();
+                        } catch (error) {
+                            console.warn('Error removing series:', error);
+                        }
+                    }
+                });
+                orderBlockSeries = [];
+            }
+        }
+
+        // Utility: Detect swing highs/lows (liquidity swings)
+function detectLiquiditySwings(candles, length = 14) {
+    const swings = [];
+    for (let i = length; i < candles.length - length; i++) {
+        let isHigh = true, isLow = true;
+        for (let j = i - length; j <= i + length; j++) {
+            if (j === i) continue;
+            if (candles[j].high >= candles[i].high) isHigh = false;
+            if (candles[j].low <= candles[i].low) isLow = false;
+        }
+        if (isHigh)
+            swings.push({ type: 'high', time: candles[i].time, price: candles[i].high });
+        if (isLow)
+            swings.push({ type: 'low', time: candles[i].time, price: candles[i].low });
+    }
+    return swings;
+}
+
+// Draw or remove liquidity swings overlays
+function drawLiquiditySwings(candles) {
+    // Remove old overlays
+    if (liquiditySwingsSeries && liquiditySwingsSeries.length > 0) {
+        liquiditySwingsSeries.forEach(series => {
+            if (series && typeof series.remove === 'function') {
+                try { series.remove(); } catch (e) {}
+            }
+        });
+        liquiditySwingsSeries = [];
+    }
+    // Remove old tags
+    document.querySelectorAll('.liquidity-tag').forEach(el => el.remove()); // (No new tags will be added)
+    if (!liquiditySwingsVisible || !candles || candles.length < 30) return;
+    const swings = detectLiquiditySwings(candles);
+    swings.forEach(swing => {
+        const color = swing.type === 'high' ? '#e74c3c' : '#009688';
+        // Find the index of the swing bar
+        const startIdx = candles.findIndex(c => c.time === swing.time);
+        let endIdx = candles.length - 1;
+        if (swing.type === 'high') {
+            for (let i = startIdx + 1; i < candles.length; i++) {
+                if (candles[i].high > swing.price) {
+                    endIdx = i;
+                    break;
+                }
+            }
+        } else {
+            for (let i = startIdx + 1; i < candles.length; i++) {
+                if (candles[i].low < swing.price) {
+                    endIdx = i;
+                    break;
+                }
+            }
+        }
+        // Line from swing bar to sweep bar (or end)
+        const lineSeries = chart.addLineSeries({
+            color,
+            lineWidth: 1,
+            priceLineVisible: false,
+            lastValueVisible: false,
+            crosshairMarkerVisible: false,
+            lineStyle: 0 // solid
+        });
+        lineSeries.setData([
+            { time: candles[startIdx].time, value: swing.price },
+            { time: candles[endIdx].time, value: swing.price }
+        ]);
+        liquiditySwingsSeries.push(lineSeries);
+    });
+}
+
+// Process received data
+async function processData(candles, orderBlocks, symbol) {
+    try {
+        console.log('Processing data:', { candles: candles?.length, orderBlocks: orderBlocks?.length, symbol });
+
+        // If chart is not initialized yet, store the data and wait
+        if (!chartInitialized || !chart) {
+            console.log('Chart not ready, storing data for later processing');
+            pendingData = { candles, orderBlocks, symbol };
+            return;
+        }
+
+        // Check if we're using fallback chart (Chart.js)
+        if (chart.constructor.name === 'Chart') {
+            processFallbackData(candles, orderBlocks, symbol);
+            return;
+        }
+
+        // Hide loading
+        document.getElementById('loading').style.display = 'none';
+
+        // Update symbol display
+        document.getElementById('symbolDisplay').textContent = symbol || 'Forex Pair';
+
+        // Clear existing order blocks before adding new ones
+        clearOrderBlocks();
+
+        // Enhanced order block detection using Smart Money Concepts
+        let enhancedOrderBlocks = orderBlocks;
+        if (candles && candles.length > 50) {
+            try {
+                // Import and use Smart Money Concepts detector
+                const { smartMoneyDetector } = await import('./smartMoneyDetector.js');
+                const smartMoneyConcepts = smartMoneyDetector.detectSmartMoneyConcepts(candles);
+                
+                console.log('Smart Money Concepts detected:', {
+                    orderBlocks: smartMoneyConcepts.orderBlocks,
+                    structures: smartMoneyConcepts.structures,
+                    fairValueGaps: smartMoneyConcepts.fairValueGaps?.length || 0,
+                    equalLevels: {
+                        highs: smartMoneyConcepts.equalLevels?.highs?.length || 0,
+                        lows: smartMoneyConcepts.equalLevels?.lows?.length || 0
+                    }
+                });
+                
+                // Use enhanced order blocks from Smart Money Concepts
+                if (smartMoneyConcepts.orderBlocks) {
+                    const combinedOrderBlocks = [
+                        ...smartMoneyConcepts.orderBlocks.bullish.map(ob => ({ ...ob, type: 'bullish' })),
+                        ...smartMoneyConcepts.orderBlocks.bearish.map(ob => ({ ...ob, type: 'bearish' }))
+                    ];
+                    
+                    if (combinedOrderBlocks.length > 0) {
+                        enhancedOrderBlocks = combinedOrderBlocks;
+                        console.log('Using enhanced Smart Money order blocks:', enhancedOrderBlocks.length);
+                    }
+                }
+                
+                // Store additional Smart Money data for potential future use
+                window.smartMoneyConcepts = smartMoneyConcepts;
+                
+            } catch (error) {
+                console.warn('Smart Money Concepts detection failed, using fallback:', error);
+                // Continue with original order blocks if Smart Money detection fails
+            }
+        }
+
+        // Set candlestick data
+        if (candles && candles.length > 0) {
+            // Draw liquidity swings overlays if enabled
+            drawLiquiditySwings(candles);
+            // Store candles globally for reference
+            window.candles = candles;
+
+            // Check if we're using candlestick or line series
+            if (candleSeries && typeof candleSeries.setData === 'function') {
+                // Check if this is a candlestick series by looking for seriesType method
+                const isCandlestickSeries = candleSeries.seriesType && candleSeries.seriesType() === 'Candlestick';
+
+                if (isCandlestickSeries) {
+                    // For candlestick series, use the data as-is
+                    candleSeries.setData(candles);
+                    console.log(`Set ${candles.length} candlesticks`);
+                } else {
+                    // For line series, convert to line data using close prices
+                    const lineData = candles.map(c => ({
+                        time: c.time,
+                        value: c.close
+                    }));
+                    candleSeries.setData(lineData);
+                    console.log(`Set ${candles.length} line data points (fallback mode)`);
+                }
+            } else {
+                console.error('Series setData method not available');
+            }
+        }
+
+        // Add enhanced order block zones
+        if (enhancedOrderBlocks && enhancedOrderBlocks.length > 0) {
+            addOrderBlockZones(enhancedOrderBlocks);
+        }
+
+        // Update statistics
+        updateStats(candles, enhancedOrderBlocks);
+
+        // Fit content
+        if (chart && typeof chart.timeScale === 'function') {
+            chart.timeScale().fitContent();
+        }
+
+        dataReceived = true;
+        console.log('Data processed successfully with Smart Money Concepts');
+
+    } catch (error) {
+        console.error('Error processing data:', error);
+        showError('Error processing data: ' + error.message);
+    }
+}
+
+        // Listen for data from the main window
+        window.addEventListener('message', (event) => {
+            console.log('Received message:', event.data);
+
+            if (event.data && event.data.candles && event.data.orderBlocks) {
+                const { candles, orderBlocks, symbol } = event.data;
+                processData(candles, orderBlocks, symbol);
+            }
+        });
+
+        // Handle errors
+        window.addEventListener('error', (event) => {
+            console.error('Global error:', event.error);
+            showError('Error loading chart: ' + (event.error ? event.error.message : event.message));
+        });
+
+        // Initialize on DOM load
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, starting library load...');
+
+            // Liquidity swings toggle button
+            const toggleBtn = document.getElementById('toggleLiquiditySwingsBtn');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', () => {
+                    liquiditySwingsVisible = !liquiditySwingsVisible;
+                    toggleBtn.setAttribute('aria-pressed', liquiditySwingsVisible ? 'true' : 'false');
+                    if (liquiditySwingsVisible) {
+                        toggleBtn.style.background = '#e3f2fd';
+                        toggleBtn.style.borderColor = '#2962FF';
+                        toggleBtn.style.color = '#2962FF';
+                    } else {
+                        toggleBtn.style.background = '';
+                        toggleBtn.style.borderColor = '';
+                        toggleBtn.style.color = '';
+                    }
+                    // Redraw overlays
+                    if (window.candles) {
+                        drawLiquiditySwings(window.candles);
+                    }
+                });
+            }
+
+            // Add zoom control event listeners
+            document.getElementById('zoomInBtn').addEventListener('click', () => {
+                if (chart) {
+                    if (chart.constructor.name === 'Chart') {
+                        // Chart.js fallback
+                        chart.zoom(1.2);
+                    } else if (typeof chart.timeScale === 'function') {
+                        // LightweightCharts
+                        chart.timeScale().applyOptions({
+                            rightOffset: chart.timeScale().options().rightOffset || 0,
+                            barSpacing: (chart.timeScale().options().barSpacing || 6) * 1.2
+                        });
+                    }
+                }
+            });
+            
+            document.getElementById('zoomOutBtn').addEventListener('click', () => {
+                if (chart) {
+                    if (chart.constructor.name === 'Chart') {
+                        // Chart.js fallback
+                        chart.zoom(0.8);
+                    } else if (typeof chart.timeScale === 'function') {
+                        // LightweightCharts
+                        chart.timeScale().applyOptions({
+                            rightOffset: chart.timeScale().options().rightOffset || 0,
+                            barSpacing: (chart.timeScale().options().barSpacing || 6) / 1.2
+                        });
+                    }
+                }
+            });
+            
+            document.getElementById('resetZoomBtn').addEventListener('click', () => {
+                if (chart) {
+                    if (chart.constructor.name === 'Chart') {
+                        // Chart.js fallback
+                        chart.resetZoom();
+                    } else if (typeof chart.timeScale === 'function') {
+                        // LightweightCharts
+                        chart.timeScale().fitContent();
+                    }
+                }
+            });
+            
+            // Check if we should skip LightweightCharts and go straight to Chart.js
+            const urlParams = new URLSearchParams(window.location.search);
+            const useFallback = urlParams.get('fallback') === 'true';
+            
+            if (useFallback) {
+                console.log('Using fallback Chart.js directly...');
+                loadChartJSFallback();
+            } else {
+                loadLightweightCharts();
+            }
+        });
+        
+        // Request data from parent window if opened directly
+        if (window.opener) {
+            console.log('Window opened by parent, requesting data...');
+            // If this window was opened by another window, request data
+            setTimeout(() => {
+                window.opener.postMessage({ type: 'REQUEST_CHART_DATA' }, '*');
+            }, 500);
+        }
+    </script>
+</body>
+</html> 
