@@ -15,7 +15,7 @@ class HuggingFaceChartAnalyzer:
         self.text_generator = None
         self.scaler = MinMaxScaler()
         # Set API key directly for immediate use
-        self.gemini_api_key = "AIzaSyDFT6NmZux5Ekb2qVMS3h25ySQdn6xwVxQ"
+        self.gemini_api_key = "enter your gemini api key"
         self.use_gemini = True
         self._initialize_models()
     
